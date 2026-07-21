@@ -82,8 +82,11 @@ export type StatusPedido = 'RECEBIDO' | 'EM_PREPARO' | 'EM_TRANSPORTE' | 'CONCLU
 export interface Pedido {
   id: number;
   clienteNome: string;
+  clienteTelefone?: string | null;  // 👈 Adicionado
+  enderecoEntrega?: string | null;  // 👈 Adicionado
+  tipoPedido?: 'MESA' | 'DELIVERY' | 'BALCAO' | string; // 👈 Adicionado
   status: StatusPedido;
-  valorTotal: number;
+  valorTotal: number | string;
   criadoEm: string;
   itens: ItemPedido[];
 }

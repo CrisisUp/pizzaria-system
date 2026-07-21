@@ -1,10 +1,60 @@
 'use client';
 
 import axios from 'axios';
-import { CheckCircle, Pizza, Plus, ShoppingBag } from 'lucide-react';
+import { CheckCircle, Pizza, Plus, ShoppingBag, Volume2, VolumeX } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from './services/api';
 import { Borda, BordaPreco, ItemPizza, Sabor, Tamanho } from './types/pizzaria';
+
+// --- SISTEMA DE EFEITOS SONOROS SIMPLES (WEB AUDIO API) ---
+const tocarSomClique = () => {
+  try {
+    const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.05);
+
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.05);
+  } catch {
+    // Silencia se o navegador bloquear o áudio automático antes da interação
+  }
+};
+
+const tocarSomSucesso = () => {
+  try {
+    const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    const notas = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6 (Arpejo de Vitória)
+
+    notas.forEach((nota, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(nota, audioCtx.currentTime + i * 0.1);
+
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime + i * 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i * 0.1 + 0.25);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start(audioCtx.currentTime + i * 0.1);
+      osc.stop(audioCtx.currentTime + i * 0.1 + 0.25);
+    });
+  } catch {
+    // Silencia se o áudio não for permitido
+  }
+};
 
 // Helper para converter valores numéricos com tipagem estrita
 const parsePreco = (valor: number | string | undefined | null): number => {
@@ -36,8 +86,17 @@ export default function Home() {
     observacoes: '',
   });
 
+  // ESTADOS DO FORMULÁRIO DO PEDIDO
   const [clienteNome, setClienteNome] = useState('');
+  const [tipoPedido, setTipoPedido] = useState<'MESA' | 'DELIVERY' | 'BALCAO'>('MESA');
+  const [clienteTelefone, setClienteTelefone] = useState('');
+  const [enderecoEntrega, setEnderecoEntrega] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [somAtivo, setSomAtivo] = useState(true);
+
+  const som = (fn: () => void) => {
+    if (somAtivo) fn();
+  };
 
   useEffect(() => {
     async function carregarDados() {
@@ -77,7 +136,6 @@ export default function Home() {
 
   // --- FUNÇÕES DE CÁLCULO DINÂMICO DE PREÇOS ---
 
-  // Retorna o preço de um sabor para o tamanho selecionado
   const getPrecoSabor = (sabor: Sabor, tamanhoId?: number): number => {
     if (!tamanhoId || !sabor) return 0;
 
@@ -87,7 +145,6 @@ export default function Home() {
     return parsePreco(relacao?.precoVenda);
   };
 
-  // Retorna o preço adicional da borda buscando por tamanho ou valor direto
   const getPrecoBorda = (borda: Borda | null, tamanhoId?: number): number => {
     if (!borda) return 0;
 
@@ -106,7 +163,6 @@ export default function Home() {
     return 0;
   };
 
-  // Preço mínimo estimado do tamanho
   const getPrecoMinimoTamanho = (tamanho: Tamanho): number => {
     if (!sabores.length) return 0;
     const precos = sabores
@@ -115,7 +171,6 @@ export default function Home() {
     return precos.length > 0 ? Math.min(...precos) : 0;
   };
 
-  // Cálculo do total
   const precoTotal = () => {
     if (!pizza.tamanho) return 0;
 
@@ -132,6 +187,7 @@ export default function Home() {
 
   const selecionarSabor = (sabor: Sabor) => {
     if (!pizza.tamanho) return;
+    som(tocarSomClique);
 
     const jaSelecionado = pizza.sabores.some((s) => s.id === sabor.id);
 
@@ -156,6 +212,11 @@ export default function Home() {
       return;
     }
 
+    if (tipoPedido === 'DELIVERY' && (!clienteTelefone.trim() || !enderecoEntrega.trim())) {
+      alert('Para pedidos via Delivery, é obrigatório informar telefone e endereço de entrega.');
+      return;
+    }
+
     setEnviando(true);
     try {
       const qtdSabores = pizza.sabores.length;
@@ -175,7 +236,6 @@ export default function Home() {
         };
       });
 
-      // 🎯 BUSCA O bordaTamanhoId CORRETO DA RELAÇÃO BordaTamanhoPreco
       let bordaTamanhoId: number | undefined = undefined;
 
       if (pizza.borda && pizza.tamanho) {
@@ -193,13 +253,19 @@ export default function Home() {
 
       const payload = {
         clienteNome: clienteNome.trim(),
-        tipoPedido: 'MESA' as const,
+        tipoPedido,
+        ...(tipoPedido === 'DELIVERY' && clienteTelefone.trim()
+          ? { clienteTelefone: clienteTelefone.trim() }
+          : {}),
+        ...(tipoPedido === 'DELIVERY' && enderecoEntrega.trim()
+          ? { enderecoEntrega: enderecoEntrega.trim() }
+          : {}),
         itens: [
           {
             tamanhoId: Number(pizza.tamanho.id),
-            ...(bordaTamanhoId ? { bordaTamanhoId } : {}), // 👈 Agora enviando o campo correto esperados pelo Prisma/Zod
+            ...(bordaTamanhoId ? { bordaTamanhoId: Number(bordaTamanhoId) } : {}),
             quantidade: 1,
-            observacoes: pizza.observacoes || undefined,
+            ...(pizza.observacoes.trim() ? { observacoes: pizza.observacoes.trim() } : {}),
             sabores: saboresPayload,
           },
         ],
@@ -207,9 +273,14 @@ export default function Home() {
 
       await api.post('/pedidos', payload);
 
+      // 🔊 Toca o som de pedido enviado com sucesso!
+      som(tocarSomSucesso);
+
       alert('🚀 Pedido enviado com sucesso!');
 
       setClienteNome('');
+      setClienteTelefone('');
+      setEnderecoEntrega('');
       setPizza({
         tamanho: tamanhos[0] || null,
         borda: null,
@@ -247,13 +318,23 @@ export default function Home() {
     <main className="min-h-screen bg-zinc-950 text-zinc-100 p-4 md:p-8">
       <div className="max-w-6xl mx-auto space-y-8">
         
-        {/* Header */}
-        <header className="flex items-center gap-3 border-b border-zinc-800 pb-6">
-          <Pizza className="w-10 h-10 text-orange-500" />
-          <div>
-            <h1 className="text-2xl font-bold text-white">Monte sua Pizza</h1>
-            <p className="text-zinc-400 text-sm">Escolha o tamanho, borda e seus sabores favoritos!</p>
+        {/* Header com botão de Mute/Unmute */}
+        <header className="flex items-center justify-between border-b border-zinc-800 pb-6">
+          <div className="flex items-center gap-3">
+            <Pizza className="w-10 h-10 text-orange-500" />
+            <div>
+              <h1 className="text-2xl font-bold text-white">Monte sua Pizza</h1>
+              <p className="text-zinc-400 text-sm">Escolha o tamanho, borda e seus sabores favoritos!</p>
+            </div>
           </div>
+
+          <button
+            onClick={() => setSomAtivo(!somAtivo)}
+            title={somAtivo ? 'Desativar sons' : 'Ativar sons'}
+            className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-all cursor-pointer"
+          >
+            {somAtivo ? <Volume2 className="w-5 h-5 text-orange-500" /> : <VolumeX className="w-5 h-5 text-zinc-600" />}
+          </button>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -272,8 +353,11 @@ export default function Home() {
                   return (
                     <button
                       key={t.id}
-                      onClick={() => setPizza({ ...pizza, tamanho: t, sabores: [] })}
-                      className={`p-4 rounded-xl border text-left transition-all ${
+                      onClick={() => {
+                        som(tocarSomClique);
+                        setPizza({ ...pizza, tamanho: t, sabores: [] });
+                      }}
+                      className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
                         ativo
                           ? 'border-orange-500 bg-orange-500/10 text-white'
                           : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700'
@@ -295,8 +379,11 @@ export default function Home() {
               <h2 className="text-lg font-semibold text-orange-400">2. Borda Recheada (Opcional)</h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <button
-                  onClick={() => setPizza({ ...pizza, borda: null })}
-                  className={`p-3 rounded-xl border text-left transition-all ${
+                  onClick={() => {
+                    som(tocarSomClique);
+                    setPizza({ ...pizza, borda: null });
+                  }}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                     pizza.borda === null
                       ? 'border-orange-500 bg-orange-500/10 text-white'
                       : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700'
@@ -313,8 +400,11 @@ export default function Home() {
                   return (
                     <button
                       key={b.id}
-                      onClick={() => setPizza({ ...pizza, borda: b })}
-                      className={`p-3 rounded-xl border text-left transition-all ${
+                      onClick={() => {
+                        som(tocarSomClique);
+                        setPizza({ ...pizza, borda: b });
+                      }}
+                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                         ativo
                           ? 'border-orange-500 bg-orange-500/10 text-white'
                           : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700'
@@ -351,10 +441,10 @@ export default function Home() {
                       onClick={() => selecionarSabor(s)}
                       className={`p-4 rounded-xl border text-left transition-all flex justify-between items-start ${
                         selecionado
-                          ? 'border-orange-500 bg-orange-500/10 text-white'
+                          ? 'border-orange-500 bg-orange-500/10 text-white cursor-pointer'
                           : desabilitado
                           ? 'border-zinc-900 bg-zinc-900/40 text-zinc-600 cursor-not-allowed'
-                          : 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-700'
+                          : 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-700 cursor-pointer'
                       }`}
                     >
                       <div>
@@ -384,16 +474,97 @@ export default function Home() {
             </h2>
 
             <div className="space-y-4 text-sm divide-y divide-zinc-800">
-              {/* Cliente */}
-              <div>
-                <label className="block text-xs text-zinc-400 mb-1">Seu Nome / Mesa:</label>
-                <input
-                  type="text"
-                  value={clienteNome}
-                  onChange={(e) => setClienteNome(e.target.value)}
-                  placeholder="Ex: João Silva - Mesa 04"
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500"
-                />
+              
+              {/* SELETOR DE TIPO DE PEDIDO */}
+              <div className="space-y-3 pb-2">
+                <label className="block text-xs text-zinc-400 font-medium">Tipo de Pedido</label>
+                <div className="grid grid-cols-3 gap-1 bg-zinc-950 p-1 rounded-lg border border-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      som(tocarSomClique);
+                      setTipoPedido('MESA');
+                    }}
+                    className={`py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                      tipoPedido === 'MESA'
+                        ? 'bg-orange-500 text-white shadow'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    🍽️ Mesa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      som(tocarSomClique);
+                      setTipoPedido('DELIVERY');
+                    }}
+                    className={`py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                      tipoPedido === 'DELIVERY'
+                        ? 'bg-orange-500 text-white shadow'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    🛵 Delivery
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      som(tocarSomClique);
+                      setTipoPedido('BALCAO');
+                    }}
+                    className={`py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                      tipoPedido === 'BALCAO'
+                        ? 'bg-orange-500 text-white shadow'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    🛍️ Balcão
+                  </button>
+                </div>
+              </div>
+
+              {/* Dados do Cliente */}
+              <div className="pt-4 space-y-3">
+                <div>
+                  <label className="block text-xs text-zinc-400 mb-1">
+                    {tipoPedido === 'MESA' ? 'Seu Nome / Mesa:' : 'Seu Nome:'}
+                  </label>
+                  <input
+                    type="text"
+                    value={clienteNome}
+                    onChange={(e) => setClienteNome(e.target.value)}
+                    placeholder={tipoPedido === 'MESA' ? 'Ex: João Silva - Mesa 04' : 'Ex: João Silva'}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+
+                {/* CAMPOS CONDICIONAIS APENAS PARA DELIVERY */}
+                {tipoPedido === 'DELIVERY' && (
+                  <>
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1">Telefone / WhatsApp:</label>
+                      <input
+                        type="text"
+                        value={clienteTelefone}
+                        onChange={(e) => setClienteTelefone(e.target.value)}
+                        placeholder="Ex: (11) 99999-9999"
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1">Endereço de Entrega:</label>
+                      <input
+                        type="text"
+                        value={enderecoEntrega}
+                        onChange={(e) => setEnderecoEntrega(e.target.value)}
+                        placeholder="Rua, Nº, Bairro e Complemento"
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Detalhes */}

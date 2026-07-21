@@ -7,9 +7,13 @@ import {
   ChefHat,
   Clock,
   Flame,
+  MapPin,
   PackageCheck,
+  Phone,
   RefreshCw,
   ShoppingBag,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
@@ -32,10 +36,41 @@ const PROXIMO_STATUS: Partial<Record<StatusPedido, StatusPedido | null>> = {
   CANCELADO: null,
 };
 
+// 🔔 Função para gerar o som de campainha/beep via Web Audio API
+const tocarSomNovoPedido = () => {
+  try {
+    const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    
+    // Toca um tom duplo (estilo campainha "Ding-Dong")
+    const tocarNota = (frequencia: number, tempoInicio: number, duracao: number) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(frequencia, audioCtx.currentTime + tempoInicio);
+
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime + tempoInicio);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + tempoInicio + duracao);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start(audioCtx.currentTime + tempoInicio);
+      osc.stop(audioCtx.currentTime + tempoInicio + duracao);
+    };
+
+    tocarNota(587.33, 0, 0.2);   // Nota D5 (Ding)
+    tocarNota(880.00, 0.15, 0.4); // Nota A5 (Dong)
+  } catch (e) {
+    console.error('Erro ao reproduzir áudio de notificação:', e);
+  }
+};
+
 export default function CozinhaPage() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [atualizandoId, setAtualizandoId] = useState<number | null>(null);
+  const [somHabilitado, setSomHabilitado] = useState(false);
 
   // Recarga manual via botão
   const recarregarPedidosManualmente = async () => {
@@ -54,7 +89,6 @@ export default function CozinhaPage() {
   useEffect(() => {
     let isMounted = true;
 
-    // 1. Carrega os pedidos pela primeira vez
     async function buscarPedidosIniciais() {
       try {
         const response = await api.get<Pedido[]>('/pedidos');
@@ -78,24 +112,24 @@ export default function CozinhaPage() {
 
     buscarPedidosIniciais();
 
-    // 2. Inicializa o Socket.IO para ouvir eventos em tempo real
-    const socket = io("http://localhost:3333", {
-      transports: ["websocket"],
+    const socket = io('http://localhost:3333', {
+      transports: ['websocket'],
     });
 
-    // ⚡ Escuta novos pedidos criados pelo cliente
-    socket.on('pedido:criado', (novoPedido: Pedido) => {
+    // ⚡ Trata novos pedidos e aciona o áudio
+    const handleNovoPedido = (novoPedido: Pedido) => {
       console.log('🍕 Novo pedido recebido via WebSocket:', novoPedido);
       setPedidos((prev) => [novoPedido, ...prev]);
-    });
 
-    // Fallback: caso o evento emitido no backend seja 'novoPedido'
-    socket.on('novoPedido', (novoPedido: Pedido) => {
-      console.log('🍕 Novo pedido recebido via WebSocket:', novoPedido);
-      setPedidos((prev) => [novoPedido, ...prev]);
-    });
+      // Tocamos o som apenas se o usuário ativou o áudio na tela
+      if (somHabilitado) {
+        tocarSomNovoPedido();
+      }
+    };
 
-    // ⚡ Escuta alterações de status dos pedidos
+    socket.on('pedido:criado', handleNovoPedido);
+    socket.on('novoPedido', handleNovoPedido);
+
     socket.on('pedido:atualizado', (pedidoAtualizado: Pedido) => {
       console.log('🔄 Status de pedido atualizado via WebSocket:', pedidoAtualizado);
       setPedidos((prev) =>
@@ -103,15 +137,21 @@ export default function CozinhaPage() {
       );
     });
 
-    // Desconecta ao desmontar o componente
     return () => {
       isMounted = false;
-      socket.off('pedido:criado');
-      socket.off('novoPedido');
+      socket.off('pedido:criado', handleNovoPedido);
+      socket.off('novoPedido', handleNovoPedido);
       socket.off('pedido:atualizado');
       socket.disconnect();
     };
-  }, []);
+  }, [somHabilitado]);
+
+  const alternarSom = () => {
+    if (!somHabilitado) {
+      tocarSomNovoPedido(); // Toca um teste para liberar a permissão do navegador
+    }
+    setSomHabilitado(!somHabilitado);
+  };
 
   const alterarStatus = async (pedidoId: number, novoStatus: StatusPedido) => {
     setAtualizandoId(pedidoId);
@@ -154,12 +194,27 @@ export default function CozinhaPage() {
             </div>
           </div>
 
-          <button
-            onClick={recarregarPedidosManualmente}
-            className="flex items-center gap-2 text-xs bg-zinc-900 hover:bg-zinc-800 text-zinc-300 px-3 py-2 rounded-lg border border-zinc-800 transition-all cursor-pointer"
-          >
-            <RefreshCw className="w-3.5 h-3.5" /> Recarregar
-          </button>
+          <div className="flex items-center gap-2">
+            {/* 🔔 BOTÃO DE NAVEGAÇÃO / ATIVAR SOM */}
+            <button
+              onClick={alternarSom}
+              className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg border transition-all cursor-pointer ${
+                somHabilitado
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30'
+                  : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:bg-zinc-800'
+              }`}
+            >
+              {somHabilitado ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              {somHabilitado ? 'Som Ativado' : 'Ativar Som'}
+            </button>
+
+            <button
+              onClick={recarregarPedidosManualmente}
+              className="flex items-center gap-2 text-xs bg-zinc-900 hover:bg-zinc-800 text-zinc-300 px-3 py-2 rounded-lg border border-zinc-800 transition-all cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> Recarregar
+            </button>
+          </div>
         </header>
 
         {/* Quadro Kanban */}
@@ -191,7 +246,9 @@ export default function CozinhaPage() {
                   ) : (
                     pedidosColuna.map((pedido) => {
                       const proximo = PROXIMO_STATUS[pedido.status];
-                      const dataCriacao = (pedido as unknown as { criadoEm?: string }).criadoEm || (pedido as unknown as { createdAt?: string }).createdAt;
+                      const dataCriacao =
+                        (pedido as unknown as { criadoEm?: string }).criadoEm ||
+                        (pedido as unknown as { createdAt?: string }).createdAt;
 
                       return (
                         <div
@@ -200,17 +257,56 @@ export default function CozinhaPage() {
                         >
                           {/* Topo do Card */}
                           <div className="flex justify-between items-start">
-                            <div>
-                              <span className="text-xs font-bold text-orange-400">
-                                #{pedido.id}
-                              </span>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-orange-400">
+                                  #{pedido.id}
+                                </span>
+
+                                {/* Badge de Tipo de Pedido */}
+                                {pedido.tipoPedido && (
+                                  <span
+                                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                                      pedido.tipoPedido === 'MESA'
+                                        ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                                        : pedido.tipoPedido === 'DELIVERY'
+                                        ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                                        : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                                    }`}
+                                  >
+                                    {pedido.tipoPedido === 'MESA' && '🍽️ MESA'}
+                                    {pedido.tipoPedido === 'DELIVERY' && '🛵 DELIVERY'}
+                                    {pedido.tipoPedido === 'BALCAO' && '🛍️ BALCÃO'}
+                                  </span>
+                                )}
+                              </div>
+
                               <h3 className="font-semibold text-sm text-white">{pedido.clienteNome}</h3>
+
+                              {/* Telefone */}
+                              {pedido.clienteTelefone && (
+                                <p className="text-[11px] text-zinc-400 flex items-center gap-1">
+                                  <Phone className="w-3 h-3 text-zinc-500 shrink-0" />
+                                  {pedido.clienteTelefone}
+                                </p>
+                              )}
+
+                              {/* Endereço */}
+                              {pedido.enderecoEntrega && (
+                                <p className="text-[11px] text-zinc-400 flex items-center gap-1 truncate max-w-[180px]">
+                                  <MapPin className="w-3 h-3 text-zinc-500 shrink-0" />
+                                  {pedido.enderecoEntrega}
+                                </p>
+                              )}
                             </div>
-                            <span className="text-[10px] text-zinc-500">
-                              {dataCriacao ? new Date(dataCriacao).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              }) : ''}
+
+                            <span className="text-[10px] text-zinc-500 shrink-0">
+                              {dataCriacao
+                                ? new Date(dataCriacao).toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })
+                                : ''}
                             </span>
                           </div>
 
@@ -229,7 +325,21 @@ export default function CozinhaPage() {
                                     </span>
                                   </div>
                                   <p className="text-zinc-400 pl-4">
-                                    {item.sabores?.map((s) => (s as unknown as { sabor?: { nome: string }; nome?: string }).sabor?.nome || (s as unknown as { nome?: string }).nome).filter(Boolean).join(', ')}
+                                    {item.sabores
+                                      ?.map(
+                                        (s) =>
+                                          (
+                                            s as unknown as {
+                                              saborTamanho?: { sabor?: { nome: string } };
+                                              sabor?: { nome: string };
+                                              nome?: string;
+                                            }
+                                          ).saborTamanho?.sabor?.nome ||
+                                          (s as unknown as { sabor?: { nome: string } }).sabor?.nome ||
+                                          (s as unknown as { nome?: string }).nome
+                                      )
+                                      .filter(Boolean)
+                                      .join(', ')}
                                   </p>
                                   {item.observacoes && (
                                     <p className="text-amber-400/90 italic text-[11px] pl-4 flex items-center gap-1">
@@ -245,7 +355,12 @@ export default function CozinhaPage() {
                           {/* Rodapé e Ação */}
                           <div className="flex items-center justify-between pt-1">
                             <span className="text-xs font-bold text-zinc-300">
-                              R$ {Number((pedido as unknown as { valorTotal?: number | string }).valorTotal || (pedido as unknown as { total?: number | string }).total || 0).toFixed(2)}
+                              R${' '}
+                              {Number(
+                                (pedido as unknown as { valorTotal?: number | string }).valorTotal ||
+                                  (pedido as unknown as { total?: number | string }).total ||
+                                  0
+                              ).toFixed(2)}
                             </span>
 
                             {proximo && (

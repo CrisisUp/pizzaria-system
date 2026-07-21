@@ -12,6 +12,33 @@ import { TamanhoEBordaService } from '../services/tamanhoEBordaService';
 
 const service = new TamanhoEBordaService();
 
+// Função auxiliar para converter Decimais do Prisma em Numbers simples
+function formatarTamanho(tamanho: any) {
+  return {
+    ...tamanho,
+    fatorMultiplicador: Number(tamanho.fatorMultiplicador ?? 1),
+    maxSabores: tamanho.maxSabores ?? 2,
+    saborPrecos: tamanho.saborPrecos?.map((p: any) => ({
+      ...p,
+      precoVenda: Number(p.precoVenda),
+    })),
+    bordaPrecos: tamanho.bordaPrecos?.map((p: any) => ({
+      ...p,
+      precoVenda: Number(p.precoVenda),
+    })),
+  };
+}
+
+function formatarBorda(borda: any) {
+  return {
+    ...borda,
+    bordaPrecos: borda.bordaPrecos?.map((p: any) => ({
+      ...p,
+      precoVenda: Number(p.precoVenda),
+    })),
+  };
+}
+
 export async function tamanhosEBordasRoutes(app: FastifyInstance) {
   const typedApp = app.withTypeProvider<ZodTypeProvider>();
 
@@ -24,7 +51,10 @@ export async function tamanhosEBordasRoutes(app: FastifyInstance) {
         service.listarTamanhos(),
         service.listarBordas(),
       ]);
-      return reply.send({ tamanhos, bordas });
+      return reply.send({
+        tamanhos: tamanhos.map(formatarTamanho),
+        bordas: bordas.map(formatarBorda),
+      });
     } catch (error: any) {
       app.log.error(error);
       return reply.status(500).send({
@@ -35,13 +65,13 @@ export async function tamanhosEBordasRoutes(app: FastifyInstance) {
   });
 
   // ==========================================
-  // ROTAS DE TAMANHOS (GET /api/tamanhos-e-bordas/tamanhos)
+  // ROTAS DE TAMANHOS (GET /api/tamanhos-e-bordas/tamanhos E GET /api/tamanhos)
   // ==========================================
 
-  typedApp.get('/tamanhos', async (_request, reply) => {
+  const getTamanhosHandler = async (_request: any, reply: any) => {
     try {
       const tamanhos = await service.listarTamanhos();
-      return reply.send(tamanhos);
+      return reply.send(tamanhos.map(formatarTamanho));
     } catch (error: any) {
       app.log.error(error);
       return reply.status(500).send({
@@ -49,19 +79,17 @@ export async function tamanhosEBordasRoutes(app: FastifyInstance) {
         detalhe: error.message,
       });
     }
-  });
+  };
+
+  typedApp.get('/tamanhos', getTamanhosHandler);
 
   typedApp.post(
     '/tamanhos',
-    {
-      schema: {
-        body: criarTamanhoSchema,
-      },
-    },
+    { schema: { body: criarTamanhoSchema } },
     async (request, reply) => {
       try {
         const novoTamanho = await service.criarTamanho(request.body);
-        return reply.status(201).send(novoTamanho);
+        return reply.status(201).send(formatarTamanho(novoTamanho));
       } catch (error: any) {
         app.log.error(error);
         return reply.status(400).send({
@@ -74,18 +102,12 @@ export async function tamanhosEBordasRoutes(app: FastifyInstance) {
 
   typedApp.put(
     '/tamanhos/:id',
-    {
-      schema: {
-        params: tamanhoParamsSchema,
-        body: atualizarTamanhoSchema,
-      },
-    },
+    { schema: { params: tamanhoParamsSchema, body: atualizarTamanhoSchema } },
     async (request, reply) => {
       const { id } = request.params;
-
       try {
         const tamanhoAtualizado = await service.atualizarTamanho(id, request.body);
-        return reply.send(tamanhoAtualizado);
+        return reply.send(formatarTamanho(tamanhoAtualizado));
       } catch (error: any) {
         app.log.error(error);
         return reply.status(400).send({
@@ -98,14 +120,9 @@ export async function tamanhosEBordasRoutes(app: FastifyInstance) {
 
   typedApp.delete(
     '/tamanhos/:id',
-    {
-      schema: {
-        params: tamanhoParamsSchema,
-      },
-    },
+    { schema: { params: tamanhoParamsSchema } },
     async (request, reply) => {
       const { id } = request.params;
-
       try {
         await service.deletarTamanho(id);
         return reply.status(204).send();
@@ -120,13 +137,13 @@ export async function tamanhosEBordasRoutes(app: FastifyInstance) {
   );
 
   // ==========================================
-  // ROTAS DE BORDAS (GET /api/tamanhos-e-bordas/bordas)
+  // ROTAS DE BORDAS (GET /api/tamanhos-e-bordas/bordas E GET /api/bordas)
   // ==========================================
 
-  typedApp.get('/bordas', async (_request, reply) => {
+  const getBordasHandler = async (_request: any, reply: any) => {
     try {
       const bordas = await service.listarBordas();
-      return reply.send(bordas);
+      return reply.send(bordas.map(formatarBorda));
     } catch (error: any) {
       app.log.error(error);
       return reply.status(500).send({
@@ -134,19 +151,17 @@ export async function tamanhosEBordasRoutes(app: FastifyInstance) {
         detalhe: error.message,
       });
     }
-  });
+  };
+
+  typedApp.get('/bordas', getBordasHandler);
 
   typedApp.post(
     '/bordas',
-    {
-      schema: {
-        body: criarBordaSchema,
-      },
-    },
+    { schema: { body: criarBordaSchema } },
     async (request, reply) => {
       try {
         const novaBorda = await service.criarBorda(request.body);
-        return reply.status(201).send(novaBorda);
+        return reply.status(201).send(formatarBorda(novaBorda));
       } catch (error: any) {
         app.log.error(error);
         return reply.status(400).send({
@@ -159,18 +174,12 @@ export async function tamanhosEBordasRoutes(app: FastifyInstance) {
 
   typedApp.put(
     '/bordas/:id',
-    {
-      schema: {
-        params: bordaParamsSchema,
-        body: atualizarBordaSchema,
-      },
-    },
+    { schema: { params: bordaParamsSchema, body: atualizarBordaSchema } },
     async (request, reply) => {
       const { id } = request.params;
-
       try {
         const bordaAtualizada = await service.atualizarBorda(id, request.body);
-        return reply.send(bordaAtualizada);
+        return reply.send(formatarBorda(bordaAtualizada));
       } catch (error: any) {
         app.log.error(error);
         return reply.status(400).send({
@@ -183,14 +192,9 @@ export async function tamanhosEBordasRoutes(app: FastifyInstance) {
 
   typedApp.delete(
     '/bordas/:id',
-    {
-      schema: {
-        params: bordaParamsSchema,
-      },
-    },
+    { schema: { params: bordaParamsSchema } },
     async (request, reply) => {
       const { id } = request.params;
-
       try {
         await service.deletarBorda(id);
         return reply.status(204).send();

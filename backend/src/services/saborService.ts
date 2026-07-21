@@ -30,7 +30,7 @@ export class SaborService {
 
   // Função privada auxiliar (Princípio DRY)
   private calcularCustosESabor(sabor: SaborComRelacionamentos) {
-    const precosComCusto = (sabor.saborPrecos || []).map((sp) => {
+    const precosETamanhos = (sabor.saborPrecos || []).map((sp) => {
       const custoProducao = sp.fichaTecnica.reduce((acc, ft) => {
         const precoCompra = Number(ft.ingrediente.precoUltimaCompra) || 0;
         const qtdEmbalagem = Number(ft.ingrediente.quantidadeEmbalagem) || 1;
@@ -60,7 +60,7 @@ export class SaborService {
       id: sabor.id,
       nome: sabor.nome,
       descricao: sabor.descricao,
-      precosETamanhos: precosComCusto,
+      precosETamanhos: precosETamanhos,
     };
   }
 

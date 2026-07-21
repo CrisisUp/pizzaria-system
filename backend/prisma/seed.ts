@@ -59,7 +59,7 @@ async function main() {
       })
     ])
 
-    // 3. INGREDIENTES - CORRIGIDO
+    // 3. INGREDIENTES
     console.log('Criando Ingredientes...')
     const ingredientes = await Promise.all([
       prisma.ingrediente.create({
@@ -90,7 +90,7 @@ async function main() {
 
     // 4. SABORES
     console.log('Criando Sabores...')
-    const sabores = await Promise.all([
+    const [margherita, calabresa, portuguesa] = await Promise.all([
       prisma.sabor.create({
         data: { nome: 'Margherita', descricao: 'Muçarela, molho e manjericão' }
       }),
@@ -102,49 +102,40 @@ async function main() {
       })
     ])
 
-    // 5. PREÇOS DOS SABORES POR TAMANHO
-    console.log('Criando Preços dos Sabores...')
-    await Promise.all([
-      prisma.saborTamanhoPreco.create({
-        data: {
-          saborId: sabores[0].id,
-          tamanhoId: media.id,
-          precoVenda: new Prisma.Decimal(45.90)
-        }
-      }),
-      prisma.saborTamanhoPreco.create({
-        data: {
-          saborId: sabores[1].id,
-          tamanhoId: media.id,
-          precoVenda: new Prisma.Decimal(49.90)
-        }
-      })
-    ])
+    // 5. PREÇOS DOS SABORES E BORDAS PARA TODOS OS TAMANHOS
+    console.log('Criando Preços dos Sabores e Bordas para todos os tamanhos...')
+    
+    // Lista com os tamanhos e seus preços base
+    const configuracaoTamanhos = [
+      { tamanho: broto, precoMargherita: 29.90, precoCalabresa: 32.90, precoPortuguesa: 34.90, precoCatupiry: 6.00, precoCheddar: 7.00 },
+      { tamanho: media, precoMargherita: 42.90, precoCalabresa: 45.90, precoPortuguesa: 49.90, precoCatupiry: 8.00, precoCheddar: 10.00 },
+      { tamanho: grande, precoMargherita: 52.90, precoCalabresa: 56.90, precoPortuguesa: 59.90, precoCatupiry: 10.00, precoCheddar: 12.00 },
+    ]
 
-    // 6. PREÇOS DAS BORDAS POR TAMANHO
-    console.log('Criando Preços das Bordas...')
-    await Promise.all([
-      prisma.bordaTamanhoPreco.create({
-        data: {
-          bordaId: catupiry.id,
-          tamanhoId: media.id,
-          precoVenda: new Prisma.Decimal(8.00)
-        }
-      }),
-      prisma.bordaTamanhoPreco.create({
-        data: {
-          bordaId: cheddar.id,
-          tamanhoId: media.id,
-          precoVenda: new Prisma.Decimal(10.00)
-        }
+    for (const cfg of configuracaoTamanhos) {
+      // Preços dos Sabores
+      await prisma.saborTamanhoPreco.createMany({
+        data: [
+          { saborId: margherita.id, tamanhoId: cfg.tamanho.id, precoVenda: new Prisma.Decimal(cfg.precoMargherita) },
+          { saborId: calabresa.id, tamanhoId: cfg.tamanho.id, precoVenda: new Prisma.Decimal(cfg.precoCalabresa) },
+          { saborId: portuguesa.id, tamanhoId: cfg.tamanho.id, precoVenda: new Prisma.Decimal(cfg.precoPortuguesa) },
+        ]
       })
-    ])
+
+      // Preços das Bordas
+      await prisma.bordaTamanhoPreco.createMany({
+        data: [
+          { bordaId: catupiry.id, tamanhoId: cfg.tamanho.id, precoVenda: new Prisma.Decimal(cfg.precoCatupiry) },
+          { bordaId: cheddar.id, tamanhoId: cfg.tamanho.id, precoVenda: new Prisma.Decimal(cfg.precoCheddar) },
+        ]
+      })
+    }
 
     console.log('✅ Seed concluído com sucesso!')
     console.log(`📊 Resumo:
     - ${ingredientes.length} ingredientes criados
-    - ${sabores.length} sabores criados
-    - 2 bordas criadas
+    - 3 sabores vinculados a 3 tamanhos
+    - 2 bordas vinculadas a 3 tamanhos
     - 3 tamanhos criados`)
 
   } catch (error) {

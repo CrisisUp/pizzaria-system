@@ -1,23 +1,40 @@
 import { FastifyInstance } from 'fastify';
 import { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { PrismaSaborRepository } from '../repositories/prisma/PrismaSaborRepository';
-import { SaborService } from '../services/saborService';
 import {
-  criarSaborSchema,
-  atualizarSaborSchema,
   atualizarFichaTecnicaSchema,
+  atualizarSaborSchema,
+  criarSaborSchema,
 } from '../schemas/saborSchema';
+import { SaborService } from '../services/saborService';
 
 const saborRepository = new PrismaSaborRepository();
 const service = new SaborService(saborRepository);
+
+// Função auxiliar para converter os campos Decimal do Prisma para Number
+function formatarSabor(sabor: any) {
+  if (!sabor) return sabor;
+
+  return {
+    ...sabor,
+    saborPrecos: sabor.saborPrecos?.map((p: any) => ({
+      ...p,
+      precoVenda: Number(p.precoVenda),
+    })),
+    fichaTecnica: sabor.fichaTecnica?.map((f: any) => ({
+      ...f,
+      quantidadeUsada: Number(f.quantidadeUsada),
+    })),
+  };
+}
 
 export async function saboresRoutes(app: FastifyInstance) {
   const server = app.withTypeProvider<ZodTypeProvider>();
 
   // 1. Listar todos os sabores (GET /api/sabores)
-  // O Fastify lida nativamente com a presença ou ausência da barra final.
   server.get('/', async () => {
-    return await service.listar();
+    const sabores = await service.listar();
+    return sabores.map(formatarSabor);
   });
 
   // 2. Buscar por ID (GET /api/sabores/:id)
@@ -35,13 +52,13 @@ export async function saboresRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: 'Sabor não encontrado' });
     }
 
-    return sabor;
+    return formatarSabor(sabor);
   });
 
   // 3. Criar Sabor
   server.post('/', { schema: criarSaborSchema }, async (request, reply) => {
     const sabor = await service.criar(request.body as any);
-    return reply.status(201).send(sabor);
+    return reply.status(201).send(formatarSabor(sabor));
   });
 
   // 4. Atualizar Sabor
@@ -54,7 +71,7 @@ export async function saboresRoutes(app: FastifyInstance) {
     }
 
     const sabor = await service.atualizar(saborId, request.body as any);
-    return sabor;
+    return formatarSabor(sabor);
   });
 
   // 5. Atualizar Ficha Técnica
@@ -66,7 +83,8 @@ export async function saboresRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'ID inválido.' });
     }
 
-    return await service.atualizarFichaTecnica(saborId, request.body as any);
+    const resultado = await service.atualizarFichaTecnica(saborId, request.body as any);
+    return resultado;
   });
 
   // 6. Deletar Sabor

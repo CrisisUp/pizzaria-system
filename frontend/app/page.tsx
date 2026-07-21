@@ -6,14 +6,14 @@ import { useEffect, useState } from 'react';
 import { api } from './services/api';
 import { Borda, ItemPizza, Sabor, Tamanho } from './types/pizzaria';
 
-// Função utilitária para converter preços com segurança e evitar NaN
+// Helper para evitar erros de valor nulo/indefinido
 const parsePreco = (valor: unknown): number => {
   if (valor === undefined || valor === null) return 0;
   const num = Number(valor);
   return isNaN(num) ? 0 : num;
 };
 
-// Função para remover duplicados de uma lista com base no ID
+// Remove duplicados de uma lista
 const removerDuplicados = <T extends { id: number | string }>(array: T[]): T[] => {
   const vistos = new Set();
   return array.filter((item) => {
@@ -29,7 +29,6 @@ export default function Home() {
   const [sabores, setSabores] = useState<Sabor[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Estado da pizza que está sendo montada
   const [pizza, setPizza] = useState<ItemPizza>({
     tamanho: null,
     borda: null,
@@ -49,7 +48,6 @@ export default function Home() {
           api.get<Sabor[]>('/sabores'),
         ]);
 
-        // Remove duplicados antes de salvar no estado
         const tamanhosUnicos = removerDuplicados(resTamanhos.data);
         const bordasUnicas = removerDuplicados(resBordas.data);
         const saboresUnicos = removerDuplicados(resSabores.data);
@@ -58,7 +56,6 @@ export default function Home() {
         setBordas(bordasUnicas);
         setSabores(saboresUnicos);
 
-        // Define o primeiro tamanho por padrão se existir
         if (tamanhosUnicos.length > 0) {
           setPizza((prev) => ({ ...prev, tamanho: tamanhosUnicos[0] }));
         }
@@ -78,11 +75,52 @@ export default function Home() {
     carregarDados();
   }, []);
 
-  // Cálculo dinâmico do preço total
+  // --- FUNÇÕES DE CÁLCULO DINÂMICO DE PREÇOS ---
+
+  // Retorna o preço de um sabor para o tamanho selecionado
+  const getPrecoSabor = (sabor: Sabor, tamanhoId?: number): number => {
+    if (!tamanhoId || !sabor) return 0;
+    
+    // Busca na estrutura 'precosETamanhos' (retornada pelo service) ou nos relacionamentos padrao
+    const listaPrecos = sabor.precosETamanhos || sabor.saborPrecos || [];
+    const relacao = listaPrecos.find((p) => Number(p.tamanhoId) === Number(tamanhoId));
+    
+    return parsePreco(relacao?.precoVenda);
+  };
+
+  // Retorna o preço de uma borda para o tamanho selecionado
+  const getPrecoBorda = (borda: Borda, tamanhoId?: number): number => {
+    if (!tamanhoId || !borda) return 0;
+    
+    const listaPrecos = borda.bordaPrecos || borda.precosETamanhos || [];
+    const relacao = listaPrecos.find((p) => Number(p.tamanhoId) === Number(tamanhoId));
+    
+    return parsePreco(relacao?.precoVenda);
+  };
+
+  // Preço mínimo estimado do tamanho (pega o sabor mais barato disponível para aquele tamanho)
+  const getPrecoMinimoTamanho = (tamanho: Tamanho): number => {
+    if (!sabores.length) return 0;
+    const precos = sabores
+      .map((s) => getPrecoSabor(s, tamanho.id))
+      .filter((p) => p > 0);
+    return precos.length > 0 ? Math.min(...precos) : 0;
+  };
+
+  // Cálculo total: Maior preço entre os sabores escolhidos + Preço da borda
   const precoTotal = () => {
-    const base = pizza.tamanho ? parsePreco(pizza.tamanho.precoBase) : 0;
-    const borda = pizza.borda ? parsePreco(pizza.borda.precoAdicional) : 0;
-    return base + borda;
+    if (!pizza.tamanho) return 0;
+
+    let valorPizza = 0;
+    if (pizza.sabores.length > 0) {
+      // Cobra pelo preço do sabor mais caro selecionado
+      const precosSabores = pizza.sabores.map((s) => getPrecoSabor(s, pizza.tamanho?.id));
+      valorPizza = Math.max(...precosSabores, 0);
+    }
+
+    const valorBorda = pizza.borda ? getPrecoBorda(pizza.borda, pizza.tamanho.id) : 0;
+
+    return valorPizza + valorBorda;
   };
 
   const selecionarSabor = (sabor: Sabor) => {
@@ -113,20 +151,57 @@ export default function Home() {
 
     setEnviando(true);
     try {
-      await api.post('/pedidos', {
-        clienteNome,
-        itens: [
-          {
-            tamanhoId: pizza.tamanho.id,
-            bordaId: pizza.borda?.id,
-            saboresIds: pizza.sabores.map((s) => s.id),
-            observacao: pizza.observacoes,
-          },
-        ],
+      // 1. Calcula fracao individual e busca o ID correto do relacionamento de preço do sabor
+      const qtdSabores = pizza.sabores.length;
+      const fracaoCalculada = Number((1 / qtdSabores).toFixed(2));
+
+      const saboresPayload = pizza.sabores.map((s) => {
+        const listaPrecos = s.precosETamanhos || s.saborPrecos || [];
+        const relacao = listaPrecos.find(
+          (p) => Number(p.tamanhoId) === Number(pizza.tamanho?.id)
+        );
+
+        // Pega saborTamanhoId (se o service calculou) ou id
+        const saborTamanhoId = relacao?.saborTamanhoId || relacao?.id || s.id;
+
+        return {
+          saborTamanhoId: Number(saborTamanhoId),
+          fracao: fracaoCalculada,
+        };
       });
 
+      // 2. Mapeia o ID do preco da borda selecionada (se houver)
+      let bordaTamanhoId: number | undefined = undefined;
+      if (pizza.borda) {
+        const listaBordas = pizza.borda.bordaPrecos || pizza.borda.precosETamanhos || [];
+        const relacaoBorda = listaBordas.find(
+          (p) => Number(p.tamanhoId) === Number(pizza.tamanho?.id)
+        );
+        if (relacaoBorda) {
+          bordaTamanhoId = Number(relacaoBorda.id || (relacaoBorda as { bordaTamanhoId?: number }).bordaTamanhoId);
+        }
+      }
+
+      // 3. Monta o payload validado pelo Zod Schema do Backend
+      const payload = {
+        clienteNome: clienteNome.trim(),
+        tipoPedido: 'MESA' as const,
+        itens: [
+          {
+            tamanhoId: Number(pizza.tamanho.id),
+            ...(bordaTamanhoId ? { bordaTamanhoId } : {}),
+            quantidade: 1,
+            observacoes: pizza.observacoes || undefined,
+            sabores: saboresPayload,
+          },
+        ],
+      };
+
+      await api.post('/pedidos', payload);
+
       alert('🚀 Pedido enviado com sucesso!');
-      // Reseta o form
+      
+      // Reseta estado
       setClienteNome('');
       setPizza({
         tamanho: tamanhos[0] || null,
@@ -136,7 +211,11 @@ export default function Home() {
       });
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
-        alert(`Erro ao fazer pedido: ${err.response?.data?.mensagem || err.message}`);
+        alert(
+          `Erro ao fazer pedido: ${
+            err.response?.data?.mensagem || err.response?.data?.detalhe || err.message
+          }`
+        );
       } else if (err instanceof Error) {
         alert(`Erro ao fazer pedido: ${err.message}`);
       } else {
@@ -172,7 +251,7 @@ export default function Home() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* Coluna Principal: Opções */}
+          {/* Coluna Principal */}
           <div className="lg:col-span-2 space-y-8">
             
             {/* 1. Escolha de Tamanho */}
@@ -181,7 +260,7 @@ export default function Home() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {tamanhos.map((t) => {
                   const ativo = pizza.tamanho?.id === t.id;
-                  const preco = parsePreco(t.precoBase);
+                  const precoMinimo = getPrecoMinimoTamanho(t);
 
                   return (
                     <button
@@ -195,7 +274,9 @@ export default function Home() {
                     >
                       <p className="font-bold text-lg">{t.nome}</p>
                       <p className="text-xs text-zinc-400">{t.fatias} fatias • até {t.maxSabores} sabores</p>
-                      <p className="text-orange-400 font-semibold mt-2">R$ {preco.toFixed(2)}</p>
+                      <p className="text-orange-400 font-semibold mt-2">
+                        A partir de R$ {precoMinimo.toFixed(2)}
+                      </p>
                     </button>
                   );
                 })}
@@ -220,7 +301,7 @@ export default function Home() {
 
                 {bordas.map((b) => {
                   const ativo = pizza.borda?.id === b.id;
-                  const precoAdicional = parsePreco(b.precoAdicional);
+                  const precoAdicional = getPrecoBorda(b, pizza.tamanho?.id);
 
                   return (
                     <button
@@ -252,6 +333,7 @@ export default function Home() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {sabores.map((s) => {
                   const selecionado = pizza.sabores.some((sabor) => sabor.id === s.id);
+                  const precoSabor = getPrecoSabor(s, pizza.tamanho?.id);
                   const desabilitado =
                     !selecionado && pizza.sabores.length >= (pizza.tamanho?.maxSabores || 1);
 
@@ -271,6 +353,9 @@ export default function Home() {
                       <div>
                         <p className="font-bold">{s.nome}</p>
                         <p className="text-xs text-zinc-400 mt-1">{s.descricao}</p>
+                        <p className="text-sm text-orange-400 font-medium mt-2">
+                          R$ {precoSabor.toFixed(2)}
+                        </p>
                       </div>
                       {selecionado ? (
                         <CheckCircle className="w-5 h-5 text-orange-500 shrink-0" />
@@ -285,7 +370,7 @@ export default function Home() {
 
           </div>
 
-          {/* Coluna Lateral: Resumo do Pedido */}
+          {/* Coluna Lateral: Resumo */}
           <div className="bg-zinc-900 p-6 rounded-2xl border border-zinc-800 h-fit space-y-6 sticky top-6">
             <h2 className="text-xl font-bold flex items-center gap-2 text-white">
               <ShoppingBag className="text-orange-500" /> Resumo do Pedido
@@ -304,7 +389,7 @@ export default function Home() {
                 />
               </div>
 
-              {/* Detalhes da Pizza */}
+              {/* Detalhes */}
               <div className="pt-4 space-y-2">
                 <div className="flex justify-between">
                   <span className="text-zinc-400">Tamanho:</span>
@@ -323,7 +408,9 @@ export default function Home() {
                   ) : (
                     <ul className="list-disc list-inside text-xs text-zinc-300 space-y-1">
                       {pizza.sabores.map((s) => (
-                        <li key={s.id}>{s.nome}</li>
+                        <li key={s.id}>
+                          {s.nome} (R$ {getPrecoSabor(s, pizza.tamanho?.id).toFixed(2)})
+                        </li>
                       ))}
                     </ul>
                   )}
@@ -341,7 +428,7 @@ export default function Home() {
                 />
               </div>
 
-              {/* Valor Total */}
+              {/* Total */}
               <div className="pt-4 flex justify-between items-end">
                 <div>
                   <span className="text-xs text-zinc-400 block">Total</span>

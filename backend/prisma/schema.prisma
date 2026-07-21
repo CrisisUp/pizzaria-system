@@ -1,0 +1,192 @@
+// Prisma Schema generated for Pizza Restaurant ERP System
+// Database provider: PostgreSQL
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+// ------------------------------------------------------
+// 1. TAMANHOS & BORDAS
+// ------------------------------------------------------
+
+model Tamanho {
+  id                 Int      @id @default(autoincrement())
+  nome               String   @db.VarChar(50) // Ex: Broto, Média, Grande, Gigante
+  fatias             Int      @default(8)
+  fatorMultiplicador Decimal  @default(1.00) @map("fator_multiplicador") @db.Decimal(4, 2)
+  criadoEm           DateTime @default(now()) @map("criado_em")
+
+  // Relacionamentos
+  saborPrecos   SaborTamanhoPreco[]
+  bordaPrecos   BordaTamanhoPreco[]
+  pedidoItens   PedidoItem[]
+
+  @@map("tamanhos")
+}
+
+model Borda {
+  id       Int      @id @default(autoincrement())
+  nome     String   @db.VarChar(50) // Ex: Catupiry, Cheddar, Chocolate
+  criadoEm DateTime @default(now()) @map("criado_em")
+
+  // Relacionamentos
+  bordaPrecos BordaTamanhoPreco[]
+
+  @@map("bordas")
+}
+
+model BordaTamanhoPreco {
+  id         Int     @id @default(autoincrement())
+  bordaId    Int     @map("borda_id")
+  tamanhoId  Int     @map("tamanho_id")
+  precoVenda Decimal @map("preco_venda") @db.Decimal(10, 2)
+
+  // Relacionamentos
+  borda        Borda         @relation(fields: [bordaId], references: [id], onDelete: Cascade)
+  tamanho      Tamanho       @relation(fields: [tamanhoId], references: [id], onDelete: Cascade)
+  fichaTecnica FichaTecnica[]
+  pedidoItens  PedidoItem[]
+
+  @@unique([bordaId, tamanhoId])
+  @@map("borda_tamanho_precos")
+}
+
+// ------------------------------------------------------
+// 2. SABORES & CARDÁPIO
+// ------------------------------------------------------
+
+model Sabor {
+  id        Int      @id @default(autoincrement())
+  nome      String   @db.VarChar(100)
+  descricao String?  @db.Text
+  criadoEm  DateTime @default(now()) @map("criado_em")
+
+  // Relacionamentos
+  saborPrecos SaborTamanhoPreco[]
+
+  @@map("sabores")
+}
+
+model SaborTamanhoPreco {
+  id         Int     @id @default(autoincrement())
+  saborId    Int     @map("sabor_id")
+  tamanhoId  Int     @map("tamanho_id")
+  precoVenda Decimal @map("preco_venda") @db.Decimal(10, 2)
+
+  // Relacionamentos
+  sabor             Sabor             @relation(fields: [saborId], references: [id], onDelete: Cascade)
+  tamanho           Tamanho           @relation(fields: [tamanhoId], references: [id], onDelete: Cascade)
+  fichaTecnica      FichaTecnica[]
+  pedidoItemSabores PedidoItemSabor[]
+
+  @@unique([saborId, tamanhoId])
+  @@map("sabor_tamanho_precos")
+}
+
+// ------------------------------------------------------
+// 3. INSUMOS, INGREDIENTES & FICHA TÉCNICA
+// ------------------------------------------------------
+
+model Ingrediente {
+  id                  String   @id @default(uuid())
+  nome                String   @db.VarChar(100)
+  unidadeCompra       String   @map("unidade_compra") @db.VarChar(10) // 'KG', 'L', 'UN'
+  precoUltimaCompra   Decimal  @map("preco_ultima_compra") @db.Decimal(10, 2)
+  quantidadeEmbalagem Decimal  @map("quantidade_embalagem") @db.Decimal(10, 3)
+  criadoEm            DateTime @default(now()) @map("criado_em")
+
+  // Relacionamentos
+  fichaTecnica FichaTecnica[]
+
+  @@map("ingredientes")
+}
+
+model FichaTecnica {
+  id              Int     @id @default(autoincrement())
+  ingredienteId   String  @map("ingrediente_id")
+  saborTamanhoId  Int?    @map("sabor_tamanho_id")
+  bordaTamanhoId  Int?    @map("borda_tamanho_id")
+  quantidadeUsada Decimal @map("quantidade_usada") @db.Decimal(10, 3)
+  unidadeMedida   String  @map("unidade_medida") @db.VarChar(10)
+
+  // Relacionamentos
+  ingrediente  Ingrediente        @relation(fields: [ingredienteId], references: [id], onDelete: Restrict)
+  saborTamanho SaborTamanhoPreco? @relation(fields: [saborTamanhoId], references: [id], onDelete: Cascade)
+  bordaTamanho BordaTamanhoPreco? @relation(fields: [bordaTamanhoId], references: [id], onDelete: Cascade)
+
+  @@map("ficha_tecnica")
+}
+
+// ------------------------------------------------------
+// 4. PEDIDOS & VENDAS
+// ------------------------------------------------------
+
+enum TipoPedido {
+  BALCAO
+  DELIVERY
+  MESA
+}
+
+enum StatusPedido {
+  RECEBIDO
+  EM_PREPARO
+  EM_TRANSPORTE
+  CONCLUIDO
+  CANCELADO
+}
+
+model Pedido {
+  id              Int          @id @default(autoincrement())
+  clienteNome     String       @map("cliente_nome") @db.VarChar(100)
+  clienteTelefone String?      @map("cliente_telefone") @db.VarChar(20)
+  enderecoEntrega String?      @map("endereco_entrega") @db.Text
+  tipoPedido      TipoPedido   @map("tipo_pedido")
+  status          StatusPedido @default(RECEBIDO)
+  valorTotal      Decimal      @default(0.00) @map("valor_total") @db.Decimal(10, 2)
+  criadoEm        DateTime     @default(now()) @map("criado_em")
+
+  // Relacionamentos
+  itens PedidoItem[]
+
+  @@map("pedidos")
+}
+
+model PedidoItem {
+  id                 Int     @id @default(autoincrement())
+  pedidoId           Int     @map("pedido_id")
+  tamanhoId          Int?    @map("tamanho_id")
+  bordaTamanhoId     Int?    @map("borda_tamanho_id")
+  quantidade         Int     @default(1)
+  precoBordaAplicado Decimal @default(0.00) @map("preco_borda_aplicado") @db.Decimal(10, 2)
+  precoUnitarioFinal Decimal @map("preco_unitario_final") @db.Decimal(10, 2)
+  subtotal           Decimal @db.Decimal(10, 2)
+  observacoes        String? @db.Text
+
+  // Relacionamentos
+  pedido       Pedido             @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  tamanho      Tamanho?           @relation(fields: [tamanhoId], references: [id])
+  bordaTamanho BordaTamanhoPreco? @relation(fields: [bordaTamanhoId], references: [id])
+  sabores      PedidoItemSabor[]
+
+  @@map("pedido_itens")
+}
+
+model PedidoItemSabor {
+  id                 Int     @id @default(autoincrement())
+  pedidoItemId       Int     @map("pedido_item_id")
+  saborTamanhoId     Int     @map("sabor_tamanho_id")
+  fracao             Decimal @default(1.00) @db.Decimal(3, 2) // 1.00 (Inteira), 0.50 (Meia), 0.33 (Terca)
+  precoSaborAplicado Decimal @map("preco_sabor_aplicado") @db.Decimal(10, 2)
+
+  // Relacionamentos
+  pedidoItem   PedidoItem        @relation(fields: [pedidoItemId], references: [id], onDelete: Cascade)
+  saborTamanho SaborTamanhoPreco @relation(fields: [saborTamanhoId], references: [id])
+
+  @@map("pedido_item_sabores")
+}

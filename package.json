@@ -1,0 +1,28 @@
+{
+  "name": "pizzaria-system",
+  "version": "1.0.0",
+  "main": "backend/src/server.ts",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only --env-file=backend/.env backend/src/server.ts",
+    "db:push": "prisma db push --schema=backend/prisma/schema.prisma",
+    "db:generate": "prisma generate --schema=backend/prisma/schema.prisma",
+    "db:seed": "prisma db seed --schema=backend/prisma/schema.prisma",
+    "db:studio": "prisma studio --schema=backend/prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@fastify/cors": "^9.0.0",
+    "@prisma/client": "^5.22.0",
+    "fastify": "^4.26.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "prisma": "^5.22.0",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.3.3"
+  },
+  "prisma": {
+    "schema": "backend/prisma/schema.prisma",
+    "seed": "ts-node --transpile-only backend/prisma/seed.ts"
+  }
+}

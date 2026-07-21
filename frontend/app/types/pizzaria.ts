@@ -7,7 +7,6 @@ export interface PrecoTamanhoItem {
   custoProducao?: number;
   margemLucroBruta?: number;
 }
-
 export interface Sabor {
   id: number;
   nome: string;
@@ -17,14 +16,37 @@ export interface Sabor {
   precosETamanhos?: PrecoTamanhoItem[];
   saborPrecos?: PrecoTamanhoItem[];
 }
-
-export interface BordaPrecoItem {
+export interface BordaPreco {
   id?: number;
-  bordaId?: number;
+  bordaTamanhoId?: number;
   tamanhoId: number;
-  precoVenda: number | string;
+  precoVenda?: number | string;
+  precoAdicional?: number | string;
 }
 
+export interface BordaTamanho {
+  id: number;
+  bordaId: number;
+  tamanhoId: number;
+  precoVenda: number | string;
+  borda?: {
+    id: number;
+    nome: string;
+  };
+}
+
+export interface ItemPedidoSabor {
+  id: number;
+  pedidoItemId: number;
+  saborTamanhoId: number;
+  fracao: string | number;
+  sabor?: {
+    id: number;
+    nome: string;
+  };
+  // Caso a API retorne diretamente o nome no objeto principal:
+  nome?: string; 
+}
 export interface Tamanho {
   id: number;
   nome: string;
@@ -33,21 +55,26 @@ export interface Tamanho {
   fatorMultiplicador?: number;
   precoBase?: number;
 }
-
 export interface Borda {
   id: number;
   nome: string;
-  precoAdicional?: number;
-  bordaPrecos?: BordaPrecoItem[];
-  precosETamanhos?: BordaPrecoItem[];
+  precoAdicional?: number | string;
+  bordaPrecos?: BordaPreco[];
+  precosETamanhos?: BordaPreco[];
 }
-
 export interface ItemPedido {
-  id?: number;
-  tamanho: Tamanho;
-  borda?: Borda | null;
-  sabores: Sabor[];
-  observacao?: string;
+  id: number;
+  quantidade: number;
+  observacoes?: string | null;
+  tamanhoId: number;
+  tamanho?: Tamanho;
+  
+  // 🎯 Atualize estes dois campos:
+  bordaTamanhoId?: number | null;
+  bordaTamanho?: BordaTamanho | null;
+  
+  sabores?: ItemPedidoSabor[];
+  subtotal?: number | string;
 }
 
 export type StatusPedido = 'RECEBIDO' | 'EM_PREPARO' | 'EM_TRANSPORTE' | 'CONCLUIDO' | 'CANCELADO';
@@ -60,7 +87,6 @@ export interface Pedido {
   criadoEm: string;
   itens: ItemPedido[];
 }
-
 export interface ItemPizza {
   tamanho: Tamanho | null;
   borda: Borda | null;

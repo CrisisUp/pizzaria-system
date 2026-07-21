@@ -10,8 +10,10 @@ export interface CriarTamanhoDTO {
 
 export interface CriarBordaDTO {
   nome: string;
-  descricao?: string;
-  precoAdicional: number;
+  bordaPrecos?: Array<{
+    tamanhoId: number;
+    precoVenda: number;
+  }>;
 }
 
 export class TamanhoEBordaService {
@@ -50,20 +52,45 @@ export class TamanhoEBordaService {
 
   async listarBordas() {
     return prisma.borda.findMany({
+      include: {
+        bordaPrecos: true, // 👈 Inclui a relação de preços por tamanho
+      },
       orderBy: { nome: 'asc' },
     });
   }
 
   async criarBorda(data: CriarBordaDTO) {
+    const { nome, bordaPrecos } = data;
+
     return prisma.borda.create({
-      data,
+      data: {
+        nome,
+        ...(bordaPrecos && bordaPrecos.length > 0
+          ? {
+              bordaPrecos: {
+                create: bordaPrecos.map((p) => ({
+                  tamanhoId: p.tamanhoId,
+                  precoVenda: p.precoVenda,
+                })),
+              },
+            }
+          : {}),
+      },
+      include: {
+        bordaPrecos: true,
+      },
     });
   }
 
   async atualizarBorda(id: number, data: Partial<CriarBordaDTO>) {
     return prisma.borda.update({
       where: { id },
-      data,
+      data: {
+        nome: data.nome,
+      },
+      include: {
+        bordaPrecos: true,
+      },
     });
   }
 

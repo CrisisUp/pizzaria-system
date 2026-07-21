@@ -30,9 +30,10 @@ app.setSerializerCompiler(serializerCompiler);
 
 const prisma = new PrismaClient();
 
-// 3. CORS
+// 3. Registre o CORS permitindo todos os métodos HTTP (incluindo PATCH)
 app.register(cors, {
-  origin: true,
+  origin: '*', // ou 'http://localhost:3000'
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], // 👈 Adicione PATCH aqui!
 });
 
 // 4. OpenAPI / Swagger Documentation

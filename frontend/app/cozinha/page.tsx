@@ -12,24 +12,24 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { io } from 'socket.io-client';
 import { api } from '../services/api';
 import { Pedido, StatusPedido } from '../types/pizzaria';
 
 const COLUNAS: { key: StatusPedido; label: string; icon: typeof Clock; color: string }[] = [
-  { key: 'PENDENTE', label: 'Pendente', icon: Clock, color: 'text-amber-400 border-amber-500/30' },
+  { key: 'RECEBIDO', label: 'Recebido', icon: Clock, color: 'text-amber-400 border-amber-500/30' },
   { key: 'EM_PREPARO', label: 'Em Preparo', icon: ChefHat, color: 'text-blue-400 border-blue-500/30' },
-  { key: 'NO_FORNO', label: 'No Forno', icon: Flame, color: 'text-orange-400 border-orange-500/30' },
-  { key: 'PRONTO', label: 'Pronto', icon: CheckCircle2, color: 'text-emerald-400 border-emerald-500/30' },
-  { key: 'ENTREGUE', label: 'Entregue', icon: PackageCheck, color: 'text-zinc-500 border-zinc-800' },
+  { key: 'EM_TRANSPORTE', label: 'Em Transporte', icon: Flame, color: 'text-orange-400 border-orange-500/30' },
+  { key: 'CONCLUIDO', label: 'Concluído', icon: CheckCircle2, color: 'text-emerald-400 border-emerald-500/30' },
+  { key: 'CANCELADO', label: 'Cancelado', icon: PackageCheck, color: 'text-zinc-500 border-zinc-800' },
 ];
 
-const PROXIMO_STATUS: Record<StatusPedido, StatusPedido | null> = {
-  PENDENTE: 'EM_PREPARO',
-  EM_PREPARO: 'NO_FORNO',
-  NO_FORNO: 'PRONTO',
-  PRONTO: 'ENTREGUE',
-  ENTREGUE: null,
+const PROXIMO_STATUS: Partial<Record<StatusPedido, StatusPedido | null>> = {
+  RECEBIDO: 'EM_PREPARO',
+  EM_PREPARO: 'EM_TRANSPORTE',
+  EM_TRANSPORTE: 'CONCLUIDO',
+  CONCLUIDO: null,
+  CANCELADO: null,
 };
 
 export default function CozinhaPage() {
@@ -79,10 +79,18 @@ export default function CozinhaPage() {
     buscarPedidosIniciais();
 
     // 2. Inicializa o Socket.IO para ouvir eventos em tempo real
-    const socket: Socket = io('http://localhost:3333');
+    const socket = io("http://localhost:3333", {
+      transports: ["websocket"],
+    });
 
     // ⚡ Escuta novos pedidos criados pelo cliente
     socket.on('pedido:criado', (novoPedido: Pedido) => {
+      console.log('🍕 Novo pedido recebido via WebSocket:', novoPedido);
+      setPedidos((prev) => [novoPedido, ...prev]);
+    });
+
+    // Fallback: caso o evento emitido no backend seja 'novoPedido'
+    socket.on('novoPedido', (novoPedido: Pedido) => {
       console.log('🍕 Novo pedido recebido via WebSocket:', novoPedido);
       setPedidos((prev) => [novoPedido, ...prev]);
     });
@@ -99,6 +107,7 @@ export default function CozinhaPage() {
     return () => {
       isMounted = false;
       socket.off('pedido:criado');
+      socket.off('novoPedido');
       socket.off('pedido:atualizado');
       socket.disconnect();
     };
@@ -108,8 +117,6 @@ export default function CozinhaPage() {
     setAtualizandoId(pedidoId);
     try {
       await api.patch(`/pedidos/${pedidoId}/status`, { status: novoStatus });
-      // Não precisamos setar o estado local aqui, pois o evento 'pedido:atualizado' 
-      // retornado via WebSocket atualiza a tela automaticamente para todos!
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         alert(`Erro ao atualizar status: ${err.response?.data?.mensagem || err.message}`);
@@ -156,7 +163,7 @@ export default function CozinhaPage() {
         </header>
 
         {/* Quadro Kanban */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 min-w-275">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 min-w-[1100px]">
           {COLUNAS.map((coluna) => {
             const Icon = coluna.icon;
             const pedidosColuna = pedidos.filter((p) => p.status === coluna.key);
@@ -184,6 +191,7 @@ export default function CozinhaPage() {
                   ) : (
                     pedidosColuna.map((pedido) => {
                       const proximo = PROXIMO_STATUS[pedido.status];
+                      const dataCriacao = (pedido as unknown as { criadoEm?: string }).criadoEm || (pedido as unknown as { createdAt?: string }).createdAt;
 
                       return (
                         <div
@@ -199,41 +207,45 @@ export default function CozinhaPage() {
                               <h3 className="font-semibold text-sm text-white">{pedido.clienteNome}</h3>
                             </div>
                             <span className="text-[10px] text-zinc-500">
-                              {new Date(pedido.createdAt).toLocaleTimeString([], {
+                              {dataCriacao ? new Date(dataCriacao).toLocaleTimeString([], {
                                 hour: '2-digit',
                                 minute: '2-digit',
-                              })}
+                              }) : ''}
                             </span>
                           </div>
 
                           {/* Itens do Pedido */}
                           <div className="space-y-2 border-t border-b border-zinc-800/60 py-2">
-                            {pedido.itens?.map((item) => (
-                              <div key={item.id} className="text-xs space-y-0.5">
-                                <div className="font-medium text-zinc-200 flex items-center gap-1">
-                                  <ShoppingBag className="w-3 h-3 text-orange-500 shrink-0" />
-                                  <span>
-                                    Pizza {item.tamanho?.nome}
-                                    {item.borda && ` (${item.borda.nome})`}
-                                  </span>
-                                </div>
-                                <p className="text-zinc-400 pl-4">
-                                  {item.sabores?.map((s) => s.nome).join(', ')}
-                                </p>
-                                {item.observacao && (
-                                  <p className="text-amber-400/90 italic text-[11px] pl-4 flex items-center gap-1">
-                                    <AlertCircle className="w-3 h-3 shrink-0" />
-                                    {item.observacao}
+                            {pedido.itens?.map((item) => {
+                              const nomeBorda = item.bordaTamanho?.borda?.nome;
+
+                              return (
+                                <div key={item.id} className="text-xs space-y-0.5">
+                                  <div className="font-medium text-zinc-200 flex items-center gap-1">
+                                    <ShoppingBag className="w-3 h-3 text-orange-500 shrink-0" />
+                                    <span>
+                                      Pizza {item.tamanho?.nome}
+                                      {nomeBorda && ` (Borda: ${nomeBorda})`}
+                                    </span>
+                                  </div>
+                                  <p className="text-zinc-400 pl-4">
+                                    {item.sabores?.map((s) => (s as unknown as { sabor?: { nome: string }; nome?: string }).sabor?.nome || (s as unknown as { nome?: string }).nome).filter(Boolean).join(', ')}
                                   </p>
-                                )}
-                              </div>
-                            ))}
+                                  {item.observacoes && (
+                                    <p className="text-amber-400/90 italic text-[11px] pl-4 flex items-center gap-1">
+                                      <AlertCircle className="w-3 h-3 shrink-0" />
+                                      {item.observacoes}
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
 
                           {/* Rodapé e Ação */}
                           <div className="flex items-center justify-between pt-1">
                             <span className="text-xs font-bold text-zinc-300">
-                              R$ {Number(pedido.total).toFixed(2)}
+                              R$ {Number((pedido as unknown as { valorTotal?: number | string }).valorTotal || (pedido as unknown as { total?: number | string }).total || 0).toFixed(2)}
                             </span>
 
                             {proximo && (

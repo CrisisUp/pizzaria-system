@@ -10,7 +10,7 @@ export const criarPedidoSchema = z.object({
   itens: z.array(
     z.object({
       tamanhoId: z.number().int().positive('ID do tamanho inválido').optional(),
-      bordaTamanhoId: z.number().int().positive().optional(),
+      bordaTamanhoId: z.number().int().positive().optional().nullable(),
       quantidade: z.number().int().min(1, 'Quantidade mínima é 1'),
       observacoes: z.string().optional(),
       sabores: z.array(

@@ -4,18 +4,18 @@ import axios from 'axios';
 import { CheckCircle, Pizza, Plus, ShoppingBag } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from './services/api';
-import { Borda, ItemPizza, Sabor, Tamanho } from './types/pizzaria';
+import { Borda, BordaPreco, ItemPizza, Sabor, Tamanho } from './types/pizzaria';
 
-// Helper para evitar erros de valor nulo/indefinido
-const parsePreco = (valor: unknown): number => {
+// Helper para converter valores numéricos com tipagem estrita
+const parsePreco = (valor: number | string | undefined | null): number => {
   if (valor === undefined || valor === null) return 0;
-  const num = Number(valor);
+  const num = typeof valor === 'number' ? valor : Number(valor);
   return isNaN(num) ? 0 : num;
 };
 
-// Remove duplicados de uma lista
+// Remove duplicados de uma lista genérica
 const removerDuplicados = <T extends { id: number | string }>(array: T[]): T[] => {
-  const vistos = new Set();
+  const vistos = new Set<number | string>();
   return array.filter((item) => {
     if (vistos.has(item.id)) return false;
     vistos.add(item.id);
@@ -59,7 +59,7 @@ export default function Home() {
         if (tamanhosUnicos.length > 0) {
           setPizza((prev) => ({ ...prev, tamanho: tamanhosUnicos[0] }));
         }
-      } catch (err: unknown) {
+      } catch (err) {
         if (axios.isAxiosError(err)) {
           alert(`Erro ao carregar cardápio: ${err.response?.data?.mensagem || err.message}`);
         } else if (err instanceof Error) {
@@ -80,25 +80,33 @@ export default function Home() {
   // Retorna o preço de um sabor para o tamanho selecionado
   const getPrecoSabor = (sabor: Sabor, tamanhoId?: number): number => {
     if (!tamanhoId || !sabor) return 0;
-    
-    // Busca na estrutura 'precosETamanhos' (retornada pelo service) ou nos relacionamentos padrao
+
     const listaPrecos = sabor.precosETamanhos || sabor.saborPrecos || [];
     const relacao = listaPrecos.find((p) => Number(p.tamanhoId) === Number(tamanhoId));
-    
+
     return parsePreco(relacao?.precoVenda);
   };
 
-  // Retorna o preço de uma borda para o tamanho selecionado
-  const getPrecoBorda = (borda: Borda, tamanhoId?: number): number => {
-    if (!tamanhoId || !borda) return 0;
-    
-    const listaPrecos = borda.bordaPrecos || borda.precosETamanhos || [];
-    const relacao = listaPrecos.find((p) => Number(p.tamanhoId) === Number(tamanhoId));
-    
-    return parsePreco(relacao?.precoVenda);
+  // Retorna o preço adicional da borda buscando por tamanho ou valor direto
+  const getPrecoBorda = (borda: Borda | null, tamanhoId?: number): number => {
+    if (!borda) return 0;
+
+    const listaPrecos: BordaPreco[] = borda.bordaPrecos || borda.precosETamanhos || [];
+    if (listaPrecos.length > 0) {
+      const relacao =
+        listaPrecos.find((p) => Number(p.tamanhoId) === Number(tamanhoId)) || listaPrecos[0];
+
+      const valorRelacao = parsePreco(relacao?.precoVenda ?? relacao?.precoAdicional);
+      if (valorRelacao > 0) return valorRelacao;
+    }
+
+    const valorDireto = parsePreco(borda.precoAdicional);
+    if (valorDireto > 0) return valorDireto;
+
+    return 0;
   };
 
-  // Preço mínimo estimado do tamanho (pega o sabor mais barato disponível para aquele tamanho)
+  // Preço mínimo estimado do tamanho
   const getPrecoMinimoTamanho = (tamanho: Tamanho): number => {
     if (!sabores.length) return 0;
     const precos = sabores
@@ -107,13 +115,12 @@ export default function Home() {
     return precos.length > 0 ? Math.min(...precos) : 0;
   };
 
-  // Cálculo total: Maior preço entre os sabores escolhidos + Preço da borda
+  // Cálculo do total
   const precoTotal = () => {
     if (!pizza.tamanho) return 0;
 
     let valorPizza = 0;
     if (pizza.sabores.length > 0) {
-      // Cobra pelo preço do sabor mais caro selecionado
       const precosSabores = pizza.sabores.map((s) => getPrecoSabor(s, pizza.tamanho?.id));
       valorPizza = Math.max(...precosSabores, 0);
     }
@@ -151,7 +158,6 @@ export default function Home() {
 
     setEnviando(true);
     try {
-      // 1. Calcula fracao individual e busca o ID correto do relacionamento de preço do sabor
       const qtdSabores = pizza.sabores.length;
       const fracaoCalculada = Number((1 / qtdSabores).toFixed(2));
 
@@ -161,7 +167,6 @@ export default function Home() {
           (p) => Number(p.tamanhoId) === Number(pizza.tamanho?.id)
         );
 
-        // Pega saborTamanhoId (se o service calculou) ou id
         const saborTamanhoId = relacao?.saborTamanhoId || relacao?.id || s.id;
 
         return {
@@ -170,26 +175,29 @@ export default function Home() {
         };
       });
 
-      // 2. Mapeia o ID do preco da borda selecionada (se houver)
+      // 🎯 BUSCA O bordaTamanhoId CORRETO DA RELAÇÃO BordaTamanhoPreco
       let bordaTamanhoId: number | undefined = undefined;
-      if (pizza.borda) {
-        const listaBordas = pizza.borda.bordaPrecos || pizza.borda.precosETamanhos || [];
-        const relacaoBorda = listaBordas.find(
-          (p) => Number(p.tamanhoId) === Number(pizza.tamanho?.id)
+
+      if (pizza.borda && pizza.tamanho) {
+        const listaPrecos: BordaPreco[] =
+          pizza.borda.bordaPrecos || pizza.borda.precosETamanhos || [];
+
+        const relacaoBorda = listaPrecos.find(
+          (bp) => Number(bp.tamanhoId) === Number(pizza.tamanho?.id)
         );
+
         if (relacaoBorda) {
-          bordaTamanhoId = Number(relacaoBorda.id || (relacaoBorda as { bordaTamanhoId?: number }).bordaTamanhoId);
+          bordaTamanhoId = Number(relacaoBorda.id);
         }
       }
 
-      // 3. Monta o payload validado pelo Zod Schema do Backend
       const payload = {
         clienteNome: clienteNome.trim(),
         tipoPedido: 'MESA' as const,
         itens: [
           {
             tamanhoId: Number(pizza.tamanho.id),
-            ...(bordaTamanhoId ? { bordaTamanhoId } : {}),
+            ...(bordaTamanhoId ? { bordaTamanhoId } : {}), // 👈 Agora enviando o campo correto esperados pelo Prisma/Zod
             quantidade: 1,
             observacoes: pizza.observacoes || undefined,
             sabores: saboresPayload,
@@ -200,8 +208,7 @@ export default function Home() {
       await api.post('/pedidos', payload);
 
       alert('🚀 Pedido enviado com sucesso!');
-      
-      // Reseta estado
+
       setClienteNome('');
       setPizza({
         tamanho: tamanhos[0] || null,
@@ -209,7 +216,7 @@ export default function Home() {
         sabores: [],
         observacoes: '',
       });
-    } catch (err: unknown) {
+    } catch (err) {
       if (axios.isAxiosError(err)) {
         alert(
           `Erro ao fazer pedido: ${

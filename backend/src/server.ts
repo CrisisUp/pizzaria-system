@@ -1,7 +1,10 @@
 import cors from '@fastify/cors';
+import fastifySwagger from '@fastify/swagger';
+import fastifySwaggerUi from '@fastify/swagger-ui';
 import { PrismaClient } from '@prisma/client';
 import Fastify from 'fastify';
 import {
+  jsonSchemaTransform,
   serializerCompiler,
   validatorCompiler,
   ZodTypeProvider,
@@ -29,18 +32,41 @@ app.register(cors, {
   origin: true, // Permite conexões do Frontend em desenvolvimento
 });
 
-// 4. Registrar as rotas da API com o prefixo /api
+// 4. Registrar a Documentação OpenAPI/Swagger (DEVE vir antes do registro das rotas)
+app.register(fastifySwagger, {
+  openapi: {
+    info: {
+      title: 'Sistema de Pizzaria API',
+      description: 'Documentação interativa das rotas do backend com validação Zod',
+      version: '1.0.0',
+    },
+    servers: [
+      {
+        url: 'http://localhost:3333',
+        description: 'Servidor Local',
+      },
+    ],
+  },
+  transform: jsonSchemaTransform, // Converte schemas do Zod em OpenAPI automaticamente
+});
+
+// 5. Interface Visual do Swagger UI
+app.register(fastifySwaggerUi, {
+  routePrefix: '/docs',
+});
+
+// 6. Registrar as rotas da API com o prefixo /api
 app.register(ingredientesRoutes, { prefix: '/api' });
 app.register(saboresRoutes, { prefix: '/api' });
 app.register(tamanhosEBordasRoutes, { prefix: '/api' });
 app.register(pedidosRoutes, { prefix: '/api' });
 
-// 5. Rota de Healthcheck
+// 7. Rota de Healthcheck
 app.get('/health', async () => {
   return { status: 'OK', timestamp: new Date().toISOString() };
 });
 
-// 6. Rota de Teste de Conexão com o Banco
+// 8. Rota de Teste de Conexão com o Banco
 app.get('/test-db', async (_request, reply) => {
   try {
     const tamanhos = await prisma.tamanho.findMany();
@@ -69,7 +95,8 @@ const start = async () => {
   try {
     const port = Number(process.env.PORT) || 3333;
     await app.listen({ port, host: '0.0.0.0' });
-    console.log(`\n🚀 Servidor Fastify v5 rodando em http://localhost:${port}\n`);
+    console.log(`\n🚀 Servidor Fastify v5 rodando em http://localhost:${port}`);
+    console.log(`📚 Documentação Swagger disponível em http://localhost:${port}/docs\n`);
   } catch (err) {
     app.log.error(err);
     await prisma.$disconnect();

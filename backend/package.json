@@ -1,5 +1,8 @@
 {
   "dependencies": {
-    "@prisma/client": "^5.22.0"
+    "@fastify/swagger": "^9.8.1",
+    "@fastify/swagger-ui": "^6.1.0",
+    "@prisma/client": "^5.22.0",
+    "json-schema-to-zod": "^2.8.1"
   }
 }

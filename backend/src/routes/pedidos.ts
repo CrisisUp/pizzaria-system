@@ -1,12 +1,20 @@
-import { StatusPedido } from '@prisma/client';
 import { FastifyInstance } from 'fastify';
-import { CriarPedidoInput, PedidoService } from '../services/pedidoService';
+import { ZodTypeProvider } from 'fastify-type-provider-zod';
+import {
+  atualizarStatusSchema,
+  criarPedidoSchema,
+  pedidoParamsSchema,
+} from '../schemas/pedidoSchema';
+import { PedidoService } from '../services/pedidoService';
 
 const service = new PedidoService();
 
 export async function pedidosRoutes(app: FastifyInstance) {
+  // Conecta o ZodTypeProvider ao Fastify v5
+  const typedApp = app.withTypeProvider<ZodTypeProvider>();
+
   // GET /api/pedidos - Lista todos os pedidos
-  app.get('/pedidos', async (request, reply) => {
+  typedApp.get('/pedidos', async (_request, reply) => {
     try {
       const pedidos = await service.listar();
       return reply.send(pedidos);
@@ -19,38 +27,41 @@ export async function pedidosRoutes(app: FastifyInstance) {
     }
   });
 
-  // POST /api/pedidos - Registra um novo pedido com sabores e bordas
-  app.post<{ Body: CriarPedidoInput }>('/pedidos', async (request, reply) => {
-    const { clienteNome, tipoPedido, itens } = request.body;
-
-    if (!clienteNome || !tipoPedido || !itens || itens.length === 0) {
-      return reply.status(400).send({
-        mensagem: 'Nome do cliente, tipo do pedido e ao menos 1 item são obrigatórios.',
-      });
-    }
-
-    try {
-      const novoPedido = await service.criar(request.body);
-      return reply.status(201).send(novoPedido);
-    } catch (error: any) {
-      app.log.error(error);
-      return reply.status(400).send({
-        mensagem: 'Erro ao criar pedido.',
-        detalhe: error.message,
-      });
-    }
-  });
-
-  // PATCH /api/pedidos/:id/status - Atualiza o status do pedido (KDS / Cozinha / Entrega)
-  app.patch<{ Params: { id: string }; Body: { status: StatusPedido } }>(
-    '/pedidos/:id/status',
+  // POST /api/pedidos - Registra um novo pedido com validação automática Zod
+  typedApp.post(
+    '/pedidos',
+    {
+      schema: {
+        body: criarPedidoSchema,
+      },
+    },
     async (request, reply) => {
-      const id = Number(request.params.id);
-      const { status } = request.body;
-
-      if (isNaN(id) || !status) {
-        return reply.status(400).send({ mensagem: 'ID inválido ou status não fornecido.' });
+      try {
+        // request.body já vem totalmente validado e tipado pelo Zod!
+        const novoPedido = await service.criar(request.body);
+        return reply.status(201).send(novoPedido);
+      } catch (error: any) {
+        app.log.error(error);
+        return reply.status(400).send({
+          mensagem: 'Erro ao criar pedido.',
+          detalhe: error.message,
+        });
       }
+    }
+  );
+
+  // PATCH /api/pedidos/:id/status - Atualiza status com validação de params e body
+  typedApp.patch(
+    '/pedidos/:id/status',
+    {
+      schema: {
+        params: pedidoParamsSchema,
+        body: atualizarStatusSchema,
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const { status } = request.body;
 
       try {
         const pedidoAtualizado = await service.atualizarStatus(id, status);

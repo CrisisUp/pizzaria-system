@@ -1,58 +1,97 @@
 import { FastifyInstance } from 'fastify';
-import { CreateIngredienteInput, IngredienteService } from '../services/ingredienteService';
+import { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { IngredienteService } from '../services/ingredienteService';
+import {
+  criarIngredienteSchema,
+  atualizarIngredienteSchema,
+  ingredienteParamsSchema,
+} from '../schemas/ingredienteSchema';
 
 const service = new IngredienteService();
 
 export async function ingredientesRoutes(app: FastifyInstance) {
-  // Listar todos os ingredientes
-  app.get('/ingredientes', async (request, reply) => {
+  // Habilita o type provider do Zod no Fastify v5
+  const typedApp = app.withTypeProvider<ZodTypeProvider>();
+
+  // GET /api/ingredientes - Listar todos os ingredientes
+  typedApp.get('/ingredientes', async (_request, reply) => {
     const ingredientes = await service.listarTodos();
     return reply.send(ingredientes);
   });
 
-  // Buscar ingrediente por ID
-  app.get<{ Params: { id: string } }>('/ingredientes/:id', async (request, reply) => {
-    const { id } = request.params;
-    const ingrediente = await service.buscarPorId(id);
+  // GET /api/ingredientes/:id - Buscar por ID
+  typedApp.get(
+    '/ingredientes/:id',
+    {
+      schema: {
+        params: ingredienteParamsSchema,
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const ingrediente = await service.buscarPorId(id);
 
-    if (!ingrediente) {
-      return reply.status(404).send({ mensagem: 'Ingrediente não encontrado.' });
+      if (!ingrediente) {
+        return reply.status(404).send({ mensagem: 'Ingrediente não encontrado.' });
+      }
+
+      return reply.send(ingrediente);
     }
+  );
 
-    return reply.send(ingrediente);
-  });
-
-  // Criar ingrediente
-  app.post<{ Body: CreateIngredienteInput }>('/ingredientes', async (request, reply) => {
-    const { nome, unidadeMedida, precoUnitario, estoqueMinimo } = request.body;
-
-    if (!nome || !unidadeMedida || precoUnitario === undefined) {
-      return reply.status(400).send({ mensagem: 'Campos nome, unidadeMedida e precoUnitario são obrigatórios.' });
+  // POST /api/ingredientes - Criar ingrediente com validação do Zod
+  typedApp.post(
+    '/ingredientes',
+    {
+      schema: {
+        body: criarIngredienteSchema,
+      },
+    },
+    async (request, reply) => {
+      // request.body já chega validado e tipado!
+      const novo = await service.criar(request.body);
+      return reply.status(201).send(novo);
     }
+  );
 
-    const novo = await service.criar({ nome, unidadeMedida, precoUnitario, estoqueMinimo });
-    return reply.status(201).send(novo);
-  });
+  // PUT /api/ingredientes/:id - Atualizar ingrediente
+  typedApp.put(
+    '/ingredientes/:id',
+    {
+      schema: {
+        params: ingredienteParamsSchema,
+        body: atualizarIngredienteSchema,
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params;
 
-  // Atualizar ingrediente
-  app.put<{ Params: { id: string }; Body: Partial<CreateIngredienteInput> }>('/ingredientes/:id', async (request, reply) => {
-    const { id } = request.params;
-    try {
-      const atualizado = await service.atualizar(id, request.body);
-      return reply.send(atualizado);
-    } catch {
-      return reply.status(404).send({ mensagem: 'Ingrediente não encontrado para atualização.' });
+      try {
+        const atualizado = await service.atualizar(id, request.body);
+        return reply.send(atualizado);
+      } catch {
+        return reply.status(404).send({ mensagem: 'Ingrediente não encontrado para atualização.' });
+      }
     }
-  });
+  );
 
-  // Deletar ingrediente
-  app.delete<{ Params: { id: string } }>('/ingredientes/:id', async (request, reply) => {
-    const { id } = request.params;
-    try {
-      await service.deletar(id);
-      return reply.status(204).send();
-    } catch {
-      return reply.status(404).send({ mensagem: 'Ingrediente não encontrado para exclusão.' });
+  // DELETE /api/ingredientes/:id - Deletar ingrediente
+  typedApp.delete(
+    '/ingredientes/:id',
+    {
+      schema: {
+        params: ingredienteParamsSchema,
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+
+      try {
+        await service.deletar(id);
+        return reply.status(204).send();
+      } catch {
+        return reply.status(404).send({ mensagem: 'Ingrediente não encontrado para exclusão.' });
+      }
     }
-  });
+  );
 }

@@ -205,6 +205,62 @@ export class SaborService {
   }
 
   /**
+   * Busca um sabor específico por ID com seus preços, ficha técnica e cálculos de custo
+   */
+  async buscarPorId(id: number) {
+    const sabor = await prisma.sabor.findUnique({
+      where: { id },
+      include: {
+        saborPrecos: {
+          include: {
+            tamanho: true,
+            fichaTecnica: {
+              include: {
+                ingrediente: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!sabor) return null;
+
+    const precosComCusto = (sabor.saborPrecos || []).map((sp) => {
+      const custoProducao = sp.fichaTecnica.reduce((acc, ft) => {
+        const precoCompra = Number(ft.ingrediente.precoUltimaCompra) || 0;
+        const qtdEmbalagem = Number(ft.ingrediente.quantidadeEmbalagem) || 1;
+        const custoUnitario = precoCompra / qtdEmbalagem;
+        const qtdUsada = Number(ft.quantidadeUsada) || 0;
+
+        return acc + custoUnitario * qtdUsada;
+      }, 0);
+
+      return {
+        saborTamanhoId: sp.id,
+        tamanhoId: sp.tamanhoId,
+        tamanhoNome: sp.tamanho.nome,
+        precoVenda: Number(sp.precoVenda),
+        custoProducao: Number(custoProducao.toFixed(2)),
+        margemLucroBruta: Number((Number(sp.precoVenda) - custoProducao).toFixed(2)),
+        fichaTecnica: sp.fichaTecnica.map((ft) => ({
+          ingredienteId: ft.ingredienteId,
+          ingrediente: ft.ingrediente.nome,
+          quantidadeUsada: Number(ft.quantidadeUsada),
+          unidadeMedida: ft.unidadeMedida,
+        })),
+      };
+    });
+
+    return {
+      id: sabor.id,
+      nome: sabor.nome,
+      descricao: sabor.descricao,
+      precosETamanhos: precosComCusto,
+    };
+  }
+
+  /**
    * Deleta um sabor
    */
   async deletar(id: number) {

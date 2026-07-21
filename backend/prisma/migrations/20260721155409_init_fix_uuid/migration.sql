@@ -56,7 +56,7 @@ CREATE TABLE "sabor_tamanho_precos" (
 
 -- CreateTable
 CREATE TABLE "ingredientes" (
-    "id" SERIAL NOT NULL,
+    "id" UUID NOT NULL,
     "nome" VARCHAR(100) NOT NULL,
     "unidade_compra" VARCHAR(10) NOT NULL,
     "preco_ultima_compra" DECIMAL(10,2) NOT NULL,
@@ -69,7 +69,7 @@ CREATE TABLE "ingredientes" (
 -- CreateTable
 CREATE TABLE "ficha_tecnica" (
     "id" SERIAL NOT NULL,
-    "ingrediente_id" INTEGER NOT NULL,
+    "ingrediente_id" UUID NOT NULL,
     "sabor_tamanho_id" INTEGER,
     "borda_tamanho_id" INTEGER,
     "quantidade_usada" DECIMAL(10,3) NOT NULL,

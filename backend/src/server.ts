@@ -10,29 +10,32 @@ import {
   ZodTypeProvider,
 } from 'fastify-type-provider-zod';
 
-// Imports das suas rotas
+// Imports das rotas
 import { ingredientesRoutes } from './routes/ingredientes';
 import { pedidosRoutes } from './routes/pedidos';
 import { saboresRoutes } from './routes/sabores';
 import { tamanhosEBordasRoutes } from './routes/tamanhosEBordas';
 
-// 1. Instância do Fastify configurada com o Type Provider do Zod
+// Import da inicialização do Socket.IO
+import { initSocket } from './socket';
+
+// 1. Instância do Fastify com Zod Type Provider
 const app = Fastify({
-  logger: true, // Logs detalhados no terminal
+  logger: true,
 }).withTypeProvider<ZodTypeProvider>();
 
-// 2. Registra os compiladores do Zod para o Fastify v5
+// 2. Compiladores Zod
 app.setValidatorCompiler(validatorCompiler);
 app.setSerializerCompiler(serializerCompiler);
 
 const prisma = new PrismaClient();
 
-// 3. Registrar CORS atualizado para o Fastify v5
+// 3. CORS
 app.register(cors, {
-  origin: true, // Permite conexões do Frontend em desenvolvimento
+  origin: true,
 });
 
-// 4. Registrar a Documentação OpenAPI/Swagger (DEVE vir antes do registro das rotas)
+// 4. OpenAPI / Swagger Documentation
 app.register(fastifySwagger, {
   openapi: {
     info: {
@@ -47,26 +50,26 @@ app.register(fastifySwagger, {
       },
     ],
   },
-  transform: jsonSchemaTransform, // Converte schemas do Zod em OpenAPI automaticamente
+  transform: jsonSchemaTransform,
 });
 
-// 5. Interface Visual do Swagger UI
+// 5. Interface Swagger UI
 app.register(fastifySwaggerUi, {
   routePrefix: '/docs',
 });
 
-// 6. Registrar as rotas da API com o prefixo /api
-app.register(ingredientesRoutes, { prefix: '/api' });
-app.register(saboresRoutes, { prefix: '/api' });
+// 6. Registro de Rotas (Prefixos Padronizados)
+app.register(ingredientesRoutes, { prefix: '/api/ingredientes' });
+app.register(saboresRoutes, { prefix: '/api/sabores' });
 app.register(tamanhosEBordasRoutes, { prefix: '/api' });
-app.register(pedidosRoutes, { prefix: '/api' });
+app.register(pedidosRoutes, { prefix: '/api/pedidos' });
 
-// 7. Rota de Healthcheck
+// 7. Healthcheck
 app.get('/health', async () => {
   return { status: 'OK', timestamp: new Date().toISOString() };
 });
 
-// 8. Rota de Teste de Conexão com o Banco
+// 8. Teste de Conexão com o Banco
 app.get('/test-db', async (_request, reply) => {
   try {
     const tamanhos = await prisma.tamanho.findMany();
@@ -85,17 +88,26 @@ app.get('/test-db', async (_request, reply) => {
   }
 });
 
-// Encerramento limpo das conexões com o banco ao desligar o servidor
+// Desconexão limpa do Prisma
 app.addHook('onClose', async () => {
   await prisma.$disconnect();
 });
 
-// Inicialização do Servidor
+// Inicialização
 const start = async () => {
   try {
     const port = Number(process.env.PORT) || 3333;
+
+    // Aguarda todos os plugins do Fastify carregarem para preparar o servidor HTTP
+    await app.ready();
+
+    // Inicializa o Socket.IO acoplado ao servidor HTTP do Fastify
+    initSocket(app.server);
+
     await app.listen({ port, host: '0.0.0.0' });
+    
     console.log(`\n🚀 Servidor Fastify v5 rodando em http://localhost:${port}`);
+    console.log(`🔌 WebSockets prontos para conexões`);
     console.log(`📚 Documentação Swagger disponível em http://localhost:${port}/docs\n`);
   } catch (err) {
     app.log.error(err);

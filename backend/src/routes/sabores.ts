@@ -1,153 +1,84 @@
 import { FastifyInstance } from 'fastify';
 import { ZodTypeProvider } from 'fastify-type-provider-zod';
-import {
-  atualizarFichaTecnicaSchema,
-  atualizarSaborSchema,
-  criarSaborSchema,
-  saborParamsSchema,
-} from '../schemas/saborSchema';
+import { PrismaSaborRepository } from '../repositories/prisma/PrismaSaborRepository';
 import { SaborService } from '../services/saborService';
+import {
+  criarSaborSchema,
+  atualizarSaborSchema,
+  atualizarFichaTecnicaSchema,
+} from '../schemas/saborSchema';
 
-const service = new SaborService();
+const saborRepository = new PrismaSaborRepository();
+const service = new SaborService(saborRepository);
 
 export async function saboresRoutes(app: FastifyInstance) {
-  const typedApp = app.withTypeProvider<ZodTypeProvider>();
+  const server = app.withTypeProvider<ZodTypeProvider>();
 
-  // GET /api/sabores
-  typedApp.get('/sabores', async (_request, reply) => {
-    try {
-      const sabores = await service.listar();
-      return reply.send(sabores);
-    } catch (error: any) {
-      app.log.error(error);
-      return reply.status(500).send({
-        mensagem: 'Erro ao listar sabores.',
-        detalhe: error.message,
-      });
-    }
+  // 1. Listar todos os sabores (GET /api/sabores)
+  // O Fastify lida nativamente com a presença ou ausência da barra final.
+  server.get('/', async () => {
+    return await service.listar();
   });
 
-  // GET /api/sabores/:id
-  typedApp.get(
-    '/sabores/:id',
-    {
-      schema: {
-        params: saborParamsSchema,
-      },
-    },
-    async (request, reply) => {
-      const { id } = request.params;
+  // 2. Buscar por ID (GET /api/sabores/:id)
+  server.get('/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const saborId = Number(id);
 
-      try {
-        const sabor = await service.buscarPorId(id);
-        if (!sabor) {
-          return reply.status(404).send({ mensagem: 'Sabor não encontrado.' });
-        }
-        return reply.send(sabor);
-      } catch (error: any) {
-        app.log.error(error);
-        return reply.status(500).send({
-          mensagem: 'Erro ao buscar sabor.',
-          detalhe: error.message,
-        });
-      }
+    if (!id || isNaN(saborId)) {
+      return reply.status(400).send({ error: 'O ID informado deve ser um número válido.' });
     }
-  );
 
-  // POST /api/sabores
-  typedApp.post(
-    '/sabores',
-    {
-      schema: {
-        body: criarSaborSchema,
-      },
-    },
-    async (request, reply) => {
-      try {
-        const novoSabor = await service.criar(request.body);
-        return reply.status(201).send(novoSabor);
-      } catch (error: any) {
-        app.log.error(error);
-        return reply.status(400).send({
-          mensagem: 'Erro ao cadastrar sabor.',
-          detalhe: error.message,
-        });
-      }
+    const sabor = await service.buscarPorId(saborId);
+
+    if (!sabor) {
+      return reply.status(404).send({ error: 'Sabor não encontrado' });
     }
-  );
 
-  // PUT /api/sabores/:id
-  typedApp.put(
-    '/sabores/:id',
-    {
-      schema: {
-        params: saborParamsSchema,
-        body: atualizarSaborSchema,
-      },
-    },
-    async (request, reply) => {
-      const { id } = request.params;
+    return sabor;
+  });
 
-      try {
-        const saborAtualizado = await service.atualizar(id, request.body);
-        return reply.send(saborAtualizado);
-      } catch (error: any) {
-        app.log.error(error);
-        return reply.status(400).send({
-          mensagem: 'Erro ao atualizar sabor.',
-          detalhe: error.message,
-        });
-      }
+  // 3. Criar Sabor
+  server.post('/', { schema: criarSaborSchema }, async (request, reply) => {
+    const sabor = await service.criar(request.body as any);
+    return reply.status(201).send(sabor);
+  });
+
+  // 4. Atualizar Sabor
+  server.put('/:id', { schema: atualizarSaborSchema }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const saborId = Number(id);
+
+    if (isNaN(saborId)) {
+      return reply.status(400).send({ error: 'ID inválido.' });
     }
-  );
 
-  // PATCH /api/sabores/:id/ficha-tecnica - Atualizar apenas a ficha técnica
-  typedApp.patch(
-    '/sabores/:id/ficha-tecnica',
-    {
-      schema: {
-        params: saborParamsSchema,
-        body: atualizarFichaTecnicaSchema,
-      },
-    },
-    async (request, reply) => {
-      const { id } = request.params;
-      const { fichaTecnica } = request.body;
+    const sabor = await service.atualizar(saborId, request.body as any);
+    return sabor;
+  });
 
-      try {
-        const resultado = await service.atualizarFichaTecnica(id, fichaTecnica);
-        return reply.send(resultado);
-      } catch (error: any) {
-        app.log.error(error);
-        return reply.status(400).send({
-          mensagem: 'Erro ao atualizar ficha técnica.',
-          detalhe: error.message,
-        });
-      }
+  // 5. Atualizar Ficha Técnica
+  server.put('/:id/ficha-tecnica', { schema: atualizarFichaTecnicaSchema }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const saborId = Number(id);
+
+    if (isNaN(saborId)) {
+      return reply.status(400).send({ error: 'ID inválido.' });
     }
-  );
 
-  // DELETE /api/sabores/:id
-  typedApp.delete(
-    '/sabores/:id',
-    {
-      schema: {
-        params: saborParamsSchema,
-      },
-    },
-    async (request, reply) => {
-      const { id } = request.params;
+    return await service.atualizarFichaTecnica(saborId, request.body as any);
+  });
 
-      try {
-        await service.deletar(id);
-        return reply.status(204).send();
-      } catch (error: any) {
-        app.log.error(error);
-        return reply.status(400).send({
-          mensagem: 'Erro ao remover sabor.',
-          detalhe: error.message,
-        });
-      }
+  // 6. Deletar Sabor
+  server.delete('/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const saborId = Number(id);
+
+    if (isNaN(saborId)) {
+      return reply.status(400).send({ error: 'ID inválido.' });
     }
-  );
+
+    await service.deletar(saborId);
+    return reply.status(204).send();
+  });
 }

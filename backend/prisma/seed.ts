@@ -1,174 +1,163 @@
-import { PrismaClient } from '@prisma/client';
+// backend/prisma/seed.ts
+import { Prisma, PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient()
 
 async function main() {
-  console.log('🌱 Iniciando o povoamento do banco de dados (Seed)...');
+  console.log('🌱 Iniciando o povoamento do banco de dados (Seed)...')
+  
+  try {
+    // Limpar dados antigos (ordem correta para evitar violação de FK)
+    console.log('Limpando dados antigos...')
+    await prisma.$transaction([
+      prisma.pedidoItemSabor.deleteMany(),
+      prisma.pedidoItem.deleteMany(),
+      prisma.pedido.deleteMany(),
+      prisma.fichaTecnica.deleteMany(),
+      prisma.ingrediente.deleteMany(),
+      prisma.bordaTamanhoPreco.deleteMany(),
+      prisma.saborTamanhoPreco.deleteMany(),
+      prisma.sabor.deleteMany(),
+      prisma.borda.deleteMany(),
+      prisma.tamanho.deleteMany(),
+    ])
 
-  // ----------------------------------------------------------------
-  // 1. TAMANHOS DE PIZZA
-  // ----------------------------------------------------------------
-  console.log('Criando Tamanhos...');
-  const broto = await prisma.tamanho.create({
-    data: { nome: 'Broto', fatias: 4, fatorMultiplicador: 0.60 },
-  });
+    // 1. TAMANHOS
+    console.log('Criando Tamanhos...')
+    const [broto, media, grande] = await Promise.all([
+      prisma.tamanho.create({
+        data: {
+          nome: 'Broto',
+          fatias: 4,
+          fatorMultiplicador: new Prisma.Decimal(0.6)
+        }
+      }),
+      prisma.tamanho.create({
+        data: {
+          nome: 'Média',
+          fatias: 8,
+          fatorMultiplicador: new Prisma.Decimal(1.0)
+        }
+      }),
+      prisma.tamanho.create({
+        data: {
+          nome: 'Grande',
+          fatias: 10,
+          fatorMultiplicador: new Prisma.Decimal(1.3)
+        }
+      })
+    ])
 
-  const media = await prisma.tamanho.create({
-    data: { nome: 'Média', fatias: 6, fatorMultiplicador: 0.80 },
-  });
+    // 2. BORDAS
+    console.log('Criando Bordas...')
+    const [catupiry, cheddar] = await Promise.all([
+      prisma.borda.create({
+        data: { nome: 'Catupiry' }
+      }),
+      prisma.borda.create({
+        data: { nome: 'Cheddar' }
+      })
+    ])
 
-  const grande = await prisma.tamanho.create({
-    data: { nome: 'Grande', fatias: 8, fatorMultiplicador: 1.00 },
-  });
+    // 3. INGREDIENTES - CORRIGIDO
+    console.log('Criando Ingredientes...')
+    const ingredientes = await Promise.all([
+      prisma.ingrediente.create({
+        data: {
+          nome: 'Muçarela',
+          unidadeCompra: 'KG',
+          precoUltimaCompra: new Prisma.Decimal(35.90),
+          quantidadeEmbalagem: new Prisma.Decimal(1.000)
+        }
+      }),
+      prisma.ingrediente.create({
+        data: {
+          nome: 'Presunto',
+          unidadeCompra: 'KG',
+          precoUltimaCompra: new Prisma.Decimal(28.50),
+          quantidadeEmbalagem: new Prisma.Decimal(1.000)
+        }
+      }),
+      prisma.ingrediente.create({
+        data: {
+          nome: 'Molho de Tomate',
+          unidadeCompra: 'L',
+          precoUltimaCompra: new Prisma.Decimal(12.90),
+          quantidadeEmbalagem: new Prisma.Decimal(1.000)
+        }
+      })
+    ])
 
-  // ----------------------------------------------------------------
-  // 2. BORDAS RECHEADAS
-  // ----------------------------------------------------------------
-  console.log('Criando Bordas...');
-  const bordaCatupiry = await prisma.borda.create({ data: { nome: 'Catupiry Original' } });
-  const bordaCheddar = await prisma.borda.create({ data: { nome: 'Cheddar' } });
-  const bordaChocolate = await prisma.borda.create({ data: { nome: 'Chocolate' } });
+    // 4. SABORES
+    console.log('Criando Sabores...')
+    const sabores = await Promise.all([
+      prisma.sabor.create({
+        data: { nome: 'Margherita', descricao: 'Muçarela, molho e manjericão' }
+      }),
+      prisma.sabor.create({
+        data: { nome: 'Calabresa', descricao: 'Calabresa, cebola e azeitonas' }
+      }),
+      prisma.sabor.create({
+        data: { nome: 'Portuguesa', descricao: 'Presunto, ovo, cebola e azeitonas' }
+      })
+    ])
 
-  // Preço da Borda por Tamanho (ex: Catupiry na Pizza Grande)
-  const bordaCatupiryGrande = await prisma.bordaTamanhoPreco.create({
-    data: { bordaId: bordaCatupiry.id, tamanhoId: grande.id, precoVenda: 10.00 },
-  });
+    // 5. PREÇOS DOS SABORES POR TAMANHO
+    console.log('Criando Preços dos Sabores...')
+    await Promise.all([
+      prisma.saborTamanhoPreco.create({
+        data: {
+          saborId: sabores[0].id,
+          tamanhoId: media.id,
+          precoVenda: new Prisma.Decimal(45.90)
+        }
+      }),
+      prisma.saborTamanhoPreco.create({
+        data: {
+          saborId: sabores[1].id,
+          tamanhoId: media.id,
+          precoVenda: new Prisma.Decimal(49.90)
+        }
+      })
+    ])
 
-  // ----------------------------------------------------------------
-  // 3. INGREDIENTES / INSUMOS
-  // ----------------------------------------------------------------
-  console.log('Criando Ingredientes...');
-  const mucarela = await prisma.ingrediente.create({
-    data: {
-      nome: 'Queijo Muçarela',
-      unidadeCompra: 'KG',
-      precoUltimaCompra: 35.00, // R$ 35,00 por KG
-      quantidadeEmbalagem: 1.000,
-    },
-  });
+    // 6. PREÇOS DAS BORDAS POR TAMANHO
+    console.log('Criando Preços das Bordas...')
+    await Promise.all([
+      prisma.bordaTamanhoPreco.create({
+        data: {
+          bordaId: catupiry.id,
+          tamanhoId: media.id,
+          precoVenda: new Prisma.Decimal(8.00)
+        }
+      }),
+      prisma.bordaTamanhoPreco.create({
+        data: {
+          bordaId: cheddar.id,
+          tamanhoId: media.id,
+          precoVenda: new Prisma.Decimal(10.00)
+        }
+      })
+    ])
 
-  const molhoTomate = await prisma.ingrediente.create({
-    data: {
-      nome: 'Molho de Tomate',
-      unidadeCompra: 'KG',
-      precoUltimaCompra: 8.00, // R$ 8,00 por KG
-      quantidadeEmbalagem: 1.000,
-    },
-  });
+    console.log('✅ Seed concluído com sucesso!')
+    console.log(`📊 Resumo:
+    - ${ingredientes.length} ingredientes criados
+    - ${sabores.length} sabores criados
+    - 2 bordas criadas
+    - 3 tamanhos criados`)
 
-  const calabresa = await prisma.ingrediente.create({
-    data: {
-      nome: 'Linguiça Calabresa',
-      unidadeCompra: 'KG',
-      precoUltimaCompra: 28.00, // R$ 28,00 por KG
-      quantidadeEmbalagem: 1.000,
-    },
-  });
-
-  const requeijao = await prisma.ingrediente.create({
-    data: {
-      nome: 'Requeijão Catupiry',
-      unidadeCompra: 'KG',
-      precoUltimaCompra: 32.00, // R$ 32,00 por KG
-      quantidadeEmbalagem: 1.000,
-    },
-  });
-
-  const caixaGrande = await prisma.ingrediente.create({
-    data: {
-      nome: 'Caixa de Pizza Grande',
-      unidadeCompra: 'UN',
-      precoUltimaCompra: 2.50, // R$ 2,50 por unidade
-      quantidadeEmbalagem: 1.000,
-    },
-  });
-
-  // Ficha técnica da Borda de Catupiry na Pizza Grande (150g de Requeijão)
-  await prisma.fichaTecnica.create({
-    data: {
-      ingredienteId: requeijao.id,
-      bordaTamanhoId: bordaCatupiryGrande.id,
-      quantidadeUsada: 0.150, // 150g
-      unidadeMedida: 'KG',
-    },
-  });
-
-  // ----------------------------------------------------------------
-  // 4. SABORES, PREÇOS E FICHAS TÉCNICAS
-  // ----------------------------------------------------------------
-  console.log('Criando Sabores e Fichas Técnicas...');
-
-  // --- SABOR 1: CALABRESA ---
-  const saborCalabresa = await prisma.sabor.create({
-    data: {
-      nome: 'Calabresa',
-      descricao: 'Molho de tomate, muçarela, fatias de calabresa e cebola.',
-    },
-  });
-
-  const calabresaGrande = await prisma.saborTamanhoPreco.create({
-    data: { saborId: saborCalabresa.id, tamanhoId: grande.id, precoVenda: 50.00 },
-  });
-
-  // Ficha técnica Calabresa Grande (Molho: 100g, Muçarela: 150g, Calabresa: 200g)
-  await prisma.fichaTecnica.createMany({
-    data: [
-      { ingredienteId: molhoTomate.id, saborTamanhoId: calabresaGrande.id, quantidadeUsada: 0.100, unidadeMedida: 'KG' },
-      { ingredienteId: mucarela.id, saborTamanhoId: calabresaGrande.id, quantidadeUsada: 0.150, unidadeMedida: 'KG' },
-      { ingredienteId: calabresa.id, saborTamanhoId: calabresaGrande.id, quantidadeUsada: 0.200, unidadeMedida: 'KG' },
-    ],
-  });
-
-  // --- SABOR 2: QUATRO QUEIJOS ---
-  const saborQuatroQueijos = await prisma.sabor.create({
-    data: {
-      nome: 'Quatro Queijos',
-      descricao: 'Molho de tomate, muçarela, requeijão, provolone e parmesão.',
-    },
-  });
-
-  const quatroQueijosGrande = await prisma.saborTamanhoPreco.create({
-    data: { saborId: saborQuatroQueijos.id, tamanhoId: grande.id, precoVenda: 60.00 },
-  });
-
-  // Ficha técnica Quatro Queijos Grande
-  await prisma.fichaTecnica.createMany({
-    data: [
-      { ingredienteId: molhoTomate.id, saborTamanhoId: quatroQueijosGrande.id, quantidadeUsada: 0.100, unidadeMedida: 'KG' },
-      { ingredienteId: mucarela.id, saborTamanhoId: quatroQueijosGrande.id, quantidadeUsada: 0.250, unidadeMedida: 'KG' },
-      { ingredienteId: requeijao.id, saborTamanhoId: quatroQueijosGrande.id, quantidadeUsada: 0.150, unidadeMedida: 'KG' },
-    ],
-  });
-
-  // --- SABOR 3: FRANGO C/ CATUPIRY ---
-  const saborFrangoCatupiry = await prisma.sabor.create({
-    data: {
-      nome: 'Frango com Catupiry',
-      descricao: 'Molho de tomate, muçarela, frango desfiado temperado e requeijão catupiry.',
-    },
-  });
-
-  const frangoCatupiryGrande = await prisma.saborTamanhoPreco.create({
-    data: { saborId: saborFrangoCatupiry.id, tamanhoId: grande.id, precoVenda: 58.00 },
-  });
-
-  // Ficha técnica Frango c/ Catupiry Grande
-  await prisma.fichaTecnica.createMany({
-    data: [
-      { ingredienteId: molhoTomate.id, saborTamanhoId: frangoCatupiryGrande.id, quantidadeUsada: 0.100, unidadeMedida: 'KG' },
-      { ingredienteId: mucarela.id, saborTamanhoId: frangoCatupiryGrande.id, quantidadeUsada: 0.150, unidadeMedida: 'KG' },
-      { ingredienteId: requeijao.id, saborTamanhoId: frangoCatupiryGrande.id, quantidadeUsada: 0.200, unidadeMedida: 'KG' },
-    ],
-  });
-
-  console.log('✅ Banco de dados povoado com sucesso!');
+  } catch (error) {
+    console.error('❌ Erro durante o povoamento do banco:', error)
+    throw error
+  }
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Erro durante o povoamento do banco:', e);
-    process.exit(1);
+    console.error('❌ Erro fatal:', e)
+    process.exit(1)
   })
   .finally(async () => {
-    await prisma.$disconnect();
-  });
+    await prisma.$disconnect()
+  })

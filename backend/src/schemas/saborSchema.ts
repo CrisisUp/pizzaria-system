@@ -12,15 +12,6 @@ export const ingredienteFichaTecnicaSchema = z.object({
   unidadeMedida: z.string().optional().default('g'),
 });
 
-export const criarSaborSchema = z.object({
-  nome: z.string().min(2, 'O nome do sabor deve ter pelo menos 2 caracteres'),
-  descricao: z.string().optional(),
-  precos: z
-    .array(precoPorTamanhoSchema)
-    .min(1, 'O sabor deve ter preço cadastrado em pelo menos 1 tamanho'),
-  fichaTecnica: z.array(ingredienteFichaTecnicaSchema).optional().default([]),
-});
-
 export const atualizarSaborSchema = z.object({
   nome: z.string().optional(),
   descricao: z.string().optional(),
@@ -36,3 +27,22 @@ export const saborParamsSchema = z.object({
     message: 'ID do sabor deve ser um número válido',
   }),
 });
+
+export const criarSaborBodySchema = z.object({
+  nome: z.string().min(1),
+  descricao: z.string().optional(),
+  precos: z.array(z.object({
+    tamanhoId: z.number(),
+    precoVenda: z.number(),
+  })),
+  fichaTecnica: z.array(z.object({
+    tamanhoId: z.number(),
+    ingredienteId: z.string(),
+    quantidadeUsada: z.number(),
+    unidadeMedida: z.string().optional(),
+  })),
+});
+
+export const criarSaborSchema = {
+  body: criarSaborBodySchema,
+};

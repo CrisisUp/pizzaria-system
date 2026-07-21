@@ -6,6 +6,7 @@ import {
   pedidoParamsSchema,
 } from '../schemas/pedidoSchema';
 import { PedidoService } from '../services/pedidoService';
+import { getIO } from '../socket'; // 👈 Import do Socket.IO
 
 const service = new PedidoService();
 
@@ -14,7 +15,7 @@ export async function pedidosRoutes(app: FastifyInstance) {
   const typedApp = app.withTypeProvider<ZodTypeProvider>();
 
   // GET /api/pedidos - Lista todos os pedidos
-  typedApp.get('/pedidos', async (_request, reply) => {
+  typedApp.get('/', async (_request, reply) => {
     try {
       const pedidos = await service.listar();
       return reply.send(pedidos);
@@ -29,7 +30,7 @@ export async function pedidosRoutes(app: FastifyInstance) {
 
   // POST /api/pedidos - Registra um novo pedido com validação automática Zod
   typedApp.post(
-    '/pedidos',
+    '/',
     {
       schema: {
         body: criarPedidoSchema,
@@ -39,6 +40,10 @@ export async function pedidosRoutes(app: FastifyInstance) {
       try {
         // request.body já vem totalmente validado e tipado pelo Zod!
         const novoPedido = await service.criar(request.body);
+
+        // 📢 Dispara evento via WebSocket para a cozinha/clientes
+        getIO().emit('pedido:criado', novoPedido);
+
         return reply.status(201).send(novoPedido);
       } catch (error: any) {
         app.log.error(error);
@@ -52,7 +57,7 @@ export async function pedidosRoutes(app: FastifyInstance) {
 
   // PATCH /api/pedidos/:id/status - Atualiza status com validação de params e body
   typedApp.patch(
-    '/pedidos/:id/status',
+    '/:id/status',
     {
       schema: {
         params: pedidoParamsSchema,
@@ -65,6 +70,10 @@ export async function pedidosRoutes(app: FastifyInstance) {
 
       try {
         const pedidoAtualizado = await service.atualizarStatus(id, status);
+
+        // 📢 Dispara evento de atualização de status em tempo real
+        getIO().emit('pedido:atualizado', pedidoAtualizado);
+
         return reply.send(pedidoAtualizado);
       } catch (error: any) {
         app.log.error(error);

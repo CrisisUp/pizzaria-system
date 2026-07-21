@@ -8,7 +8,6 @@ datasource db {
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../node_modules/.prisma/client"
 }
 
 // ------------------------------------------------------
@@ -94,7 +93,7 @@ model SaborTamanhoPreco {
 // ------------------------------------------------------
 
 model Ingrediente {
-  id                  String   @id @default(uuid())
+  id                  String   @id @default(uuid()) @db.Uuid
   nome                String   @db.VarChar(100)
   unidadeCompra       String   @map("unidade_compra") @db.VarChar(10) // 'KG', 'L', 'UN'
   precoUltimaCompra   Decimal  @map("preco_ultima_compra") @db.Decimal(10, 2)
@@ -109,7 +108,7 @@ model Ingrediente {
 
 model FichaTecnica {
   id              Int     @id @default(autoincrement())
-  ingredienteId   String  @map("ingrediente_id")
+  ingredienteId   String  @map("ingrediente_id") @db.Uuid
   saborTamanhoId  Int?    @map("sabor_tamanho_id")
   bordaTamanhoId  Int?    @map("borda_tamanho_id")
   quantidadeUsada Decimal @map("quantidade_usada") @db.Decimal(10, 3)

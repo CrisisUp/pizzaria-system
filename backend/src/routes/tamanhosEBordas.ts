@@ -1,14 +1,14 @@
 import { FastifyInstance } from 'fastify';
 import { ZodTypeProvider } from 'fastify-type-provider-zod';
-import { TamanhoEBordaService } from '../services/tamanhoEBordaService';
 import {
-  criarTamanhoSchema,
-  atualizarTamanhoSchema,
-  tamanhoParamsSchema,
-  criarBordaSchema,
   atualizarBordaSchema,
+  atualizarTamanhoSchema,
   bordaParamsSchema,
+  criarBordaSchema,
+  criarTamanhoSchema,
+  tamanhoParamsSchema,
 } from '../schemas/tamanhoEBordaSchema';
+import { TamanhoEBordaService } from '../services/tamanhoEBordaService';
 
 const service = new TamanhoEBordaService();
 
@@ -16,10 +16,28 @@ export async function tamanhosEBordasRoutes(app: FastifyInstance) {
   const typedApp = app.withTypeProvider<ZodTypeProvider>();
 
   // ==========================================
-  // ROTAS DE TAMANHOS
+  // ROTA RAIZ (GET /api/tamanhos-e-bordas)
+  // ==========================================
+  typedApp.get('/', async (_request, reply) => {
+    try {
+      const [tamanhos, bordas] = await Promise.all([
+        service.listarTamanhos(),
+        service.listarBordas(),
+      ]);
+      return reply.send({ tamanhos, bordas });
+    } catch (error: any) {
+      app.log.error(error);
+      return reply.status(500).send({
+        mensagem: 'Erro ao listar tamanhos e bordas.',
+        detalhe: error.message,
+      });
+    }
+  });
+
+  // ==========================================
+  // ROTAS DE TAMANHOS (GET /api/tamanhos-e-bordas/tamanhos)
   // ==========================================
 
-  // GET /api/tamanhos
   typedApp.get('/tamanhos', async (_request, reply) => {
     try {
       const tamanhos = await service.listarTamanhos();
@@ -33,7 +51,6 @@ export async function tamanhosEBordasRoutes(app: FastifyInstance) {
     }
   });
 
-  // POST /api/tamanhos
   typedApp.post(
     '/tamanhos',
     {
@@ -55,7 +72,6 @@ export async function tamanhosEBordasRoutes(app: FastifyInstance) {
     }
   );
 
-  // PUT /api/tamanhos/:id
   typedApp.put(
     '/tamanhos/:id',
     {
@@ -80,7 +96,6 @@ export async function tamanhosEBordasRoutes(app: FastifyInstance) {
     }
   );
 
-  // DELETE /api/tamanhos/:id
   typedApp.delete(
     '/tamanhos/:id',
     {
@@ -105,10 +120,9 @@ export async function tamanhosEBordasRoutes(app: FastifyInstance) {
   );
 
   // ==========================================
-  // ROTAS DE BORDAS
+  // ROTAS DE BORDAS (GET /api/tamanhos-e-bordas/bordas)
   // ==========================================
 
-  // GET /api/bordas
   typedApp.get('/bordas', async (_request, reply) => {
     try {
       const bordas = await service.listarBordas();
@@ -122,7 +136,6 @@ export async function tamanhosEBordasRoutes(app: FastifyInstance) {
     }
   });
 
-  // POST /api/bordas
   typedApp.post(
     '/bordas',
     {
@@ -144,7 +157,6 @@ export async function tamanhosEBordasRoutes(app: FastifyInstance) {
     }
   );
 
-  // PUT /api/bordas/:id
   typedApp.put(
     '/bordas/:id',
     {
@@ -169,7 +181,6 @@ export async function tamanhosEBordasRoutes(app: FastifyInstance) {
     }
   );
 
-  // DELETE /api/bordas/:id
   typedApp.delete(
     '/bordas/:id',
     {

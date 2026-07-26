@@ -48,9 +48,16 @@ export async function ingredientesRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      // request.body já chega validado e tipado!
-      const novo = await service.criar(request.body);
-      return reply.status(201).send(novo);
+      try {
+        const novo = await service.criar(request.body);
+        return reply.status(201).send(novo);
+      } catch (error: any) {
+        app.log.error(error);
+        return reply.status(400).send({
+          mensagem: 'Erro ao criar ingrediente.',
+          detalhe: error.message,
+        });
+      }
     }
   );
 

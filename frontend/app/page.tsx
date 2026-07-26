@@ -353,6 +353,7 @@ export default function Home() {
                   return (
                     <button
                       key={t.id}
+                      disabled={enviando}
                       onClick={() => {
                         som(tocarSomClique);
                         setPizza({ ...pizza, tamanho: t, sabores: [] });
@@ -379,6 +380,7 @@ export default function Home() {
               <h2 className="text-lg font-semibold text-orange-400">2. Borda Recheada (Opcional)</h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <button
+                  disabled={enviando}
                   onClick={() => {
                     som(tocarSomClique);
                     setPizza({ ...pizza, borda: null });
@@ -400,6 +402,7 @@ export default function Home() {
                   return (
                     <button
                       key={b.id}
+                      disabled={enviando}
                       onClick={() => {
                         som(tocarSomClique);
                         setPizza({ ...pizza, borda: b });
@@ -481,6 +484,7 @@ export default function Home() {
                 <div className="grid grid-cols-3 gap-1 bg-zinc-950 p-1 rounded-lg border border-zinc-800">
                   <button
                     type="button"
+                    disabled={enviando}
                     onClick={() => {
                       som(tocarSomClique);
                       setTipoPedido('MESA');
@@ -495,6 +499,7 @@ export default function Home() {
                   </button>
                   <button
                     type="button"
+                    disabled={enviando}
                     onClick={() => {
                       som(tocarSomClique);
                       setTipoPedido('DELIVERY');
@@ -509,6 +514,7 @@ export default function Home() {
                   </button>
                   <button
                     type="button"
+                    disabled={enviando}
                     onClick={() => {
                       som(tocarSomClique);
                       setTipoPedido('BALCAO');
@@ -534,8 +540,9 @@ export default function Home() {
                     type="text"
                     value={clienteNome}
                     onChange={(e) => setClienteNome(e.target.value)}
+                    disabled={enviando}
                     placeholder={tipoPedido === 'MESA' ? 'Ex: João Silva - Mesa 04' : 'Ex: João Silva'}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500 disabled:opacity-50"
                   />
                 </div>
 
@@ -548,8 +555,9 @@ export default function Home() {
                         type="text"
                         value={clienteTelefone}
                         onChange={(e) => setClienteTelefone(e.target.value)}
+                        disabled={enviando}
                         placeholder="Ex: (11) 99999-9999"
-                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500"
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500 disabled:opacity-50"
                       />
                     </div>
 
@@ -559,8 +567,9 @@ export default function Home() {
                         type="text"
                         value={enderecoEntrega}
                         onChange={(e) => setEnderecoEntrega(e.target.value)}
+                        disabled={enviando}
                         placeholder="Rua, Nº, Bairro e Complemento"
-                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500"
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500 disabled:opacity-50"
                       />
                     </div>
                   </>
@@ -601,8 +610,9 @@ export default function Home() {
                 <textarea
                   value={pizza.observacoes}
                   onChange={(e) => setPizza({ ...pizza, observacoes: e.target.value })}
+                  disabled={enviando}
                   placeholder="Ex: Sem cebola, caprichar no orégano..."
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500 h-20 resize-none"
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500 h-20 resize-none disabled:opacity-50"
                 />
               </div>
 

@@ -4,9 +4,12 @@ import { Server } from 'socket.io';
 let io: Server;
 
 export function initSocket(httpServer: HttpServer) {
+  const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
+  const corsOrigins = corsOrigin.split(',').map((s) => s.trim());
+
   io = new Server(httpServer, {
     cors: {
-      origin: '*', // Ou a URL do seu frontend Next.js
+      origin: corsOrigins,
       methods: ['GET', 'POST'],
     },
   });

@@ -2,9 +2,9 @@ import { z } from 'zod';
 
 export const criarIngredienteSchema = z.object({
   nome: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres'),
-  unidadeMedida: z.string().min(1, 'A unidade de medida é obrigatória'), // Ex: "KG", "G", "L", "UN"
-  precoUnitario: z.number().nonnegative('O preço unitário não pode ser negativo'),
-  estoqueMinimo: z.number().nonnegative('O estoque mínimo não pode ser negativo').optional().default(0),
+  unidadeCompra: z.string().min(1, 'A unidade de compra é obrigatória'), // Ex: "KG", "L", "UN"
+  precoUltimaCompra: z.number().nonnegative('O preço da última compra não pode ser negativo'),
+  quantidadeEmbalagem: z.number().positive('A quantidade por embalagem deve ser positiva'),
 });
 
 export const atualizarIngredienteSchema = criarIngredienteSchema.partial();

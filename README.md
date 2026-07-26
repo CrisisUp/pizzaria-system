@@ -1,101 +1,125 @@
-# 🍕 Cardápio Digital & Pedidos - Pizzaria
+# 🍕 Pizzaria System
 
-Um sistema moderno e intuitivo de cardápio interativo e checkout de pedidos de pizza. O projeto conta com cálculo dinâmico de preços por tamanho/borda/sabores, suporte a múltiplos tipos de pedido (Mesa, Delivery e Balcão) e efeitos sonoros para uma experiência do usuário incrível.
+Sistema de cardápio digital e gestão de pedidos para pizzaria com painel da cozinha em tempo real.
 
----
+## 🚀 Tecnologias
 
-## 🚀 Funcionalidades
+| Camada | Tecnologia |
+| --- | --- |
+| **Backend** | Fastify 5 + Zod + Prisma 5 + Socket.IO 4 |
+| **Frontend** | Next.js 16 + Tailwind CSS 4 + Axios |
+| **Banco** | PostgreSQL 16 |
+| **Infra** | Docker Compose |
 
-- 📏 **Escolha Dinâmica de Tamanho:** Preços mínimos calculados automaticamente com base no tamanho selecionado.
-- 🧀 **Borda Recheada Opcional:** Atualização em tempo real do valor total ao selecionar/desselecionar bordas.
-- 🍕 **Seleção Multi-sabores:** Limitação automática de acordo com a quantidade máxima permitida por tamanho (ex: até 4 sabores numa pizza Grande).
-- 🛵 **Fluxo de Atendimento Flexível:**
-  - **🍽️ Mesa:** Nome / Número da Mesa.
-  - **🛵 Delivery:** Validação de telefone/WhatsApp e endereço de entrega.
-  - **🛍️ Balcão:** Retirada rápida.
-- 🔊 **Efeitos Sonoros Integrados:** Audio feedback no clique dos botões e som comemorativo ao enviar o pedido (com opção de Mute/Unmute no topo).
-- 🎨 **Interface Dark Mode:** Layout responsivo, elegante e otimizado para dispositivos móveis feito com Tailwind CSS.
+## ✅ Funcionalidades
 
----
+- 📏 Escolha dinâmica de tamanho com precificação automática
+- 🧀 Borda recheada opcional com atualização de preço em tempo real
+- 🍕 Seleção multi-sabores com limite por tamanho
+- 🛵 3 tipos de pedido: Mesa, Delivery e Balcão
+- 🔊 Efeitos sonoros (Web Audio API) com opção Mute/Unmute
+- 👨‍🍳 Painel Kanban da cozinha com WebSockets em tempo real
+- 📚 Swagger UI em `/docs`
+- 🎨 Tema escuro responsivo
 
-## 🛠️ Tech Stack
+## 🏗️ Estrutura
 
-- **Frontend:** [Next.js](https://nextjs.org/) (App Router, React, TypeScript)
-- **Estilização:** [Tailwind CSS](https://tailwindcss.com/) & [Lucide React](https://lucide.dev/) (Ícones)
-- **Requisições HTTP:** [Axios](https://axios-http.com/)
-- **Audio:** Web Audio API (Nativa do Navegador)
-
----
-
-## 📂 Estrutura das Requisições (API)
-
-O projeto se integra com um backend (Fastify / Express / Nest) enviando payloads validados para a rota `/pedidos`:
-
-```json
-{
-  "clienteNome": "João Silva",
-  "tipoPedido": "DELIVERY",
-  "clienteTelefone": "(11) 99999-9999",
-  "enderecoEntrega": "Rua das Flores, 123",
-  "itens": [
-    {
-      "tamanhoId": 1,
-      "bordaTamanhoId": 2,
-      "quantidade": 1,
-      "observacoes": "Sem cebola",
-      "sabores": [
-        { "saborTamanhoId": 10, "fracao": 0.5 },
-        { "saborTamanhoId": 12, "fracao": 0.5 }
-      ]
-    }
-  ]
-}
+```
+pizzaria-system/
+├── backend/                    # API Fastify + Prisma
+│   ├── prisma/                 # Schema + migrations + seed
+│   ├── src/
+│   │   ├── controllers/        # Controller do pedido (legado)
+│   │   ├── lib/                # Singleton PrismaClient
+│   │   ├── repositories/       # Interfaces + implementações Prisma
+│   │   ├── routes/             # Rotas Fastify com validação Zod
+│   │   ├── schemas/            # Schemas Zod
+│   │   ├── services/           # Lógica de negócio
+│   │   ├── server.ts           # Ponto de entrada
+│   │   └── socket.ts           # Configuração Socket.IO
+│   └── package.json
+├── frontend/                   # Next.js App Router
+│   └── app/
+│       ├── page.tsx            # Cardápio - Monte sua pizza
+│       ├── cozinha/page.tsx    # Painel Kanban da cozinha
+│       ├── services/api.ts     # Axios config
+│       └── types/pizzaria.ts   # Types compartilhados
+├── docker-compose.yml          # Orquestração dos containers
+├── Dockerfile.backend          # Build da imagem do backend
+└── tsconfig.json               # Config TypeScript do monorepo
 ```
 
-## 🔧 Como Executar o Projeto
+## 🔧 Como Rodar
 
-### Pré-requisitos
-
-Certifique-se de ter instalado em sua máquina:
-
-- Node.js (v18 ou superior)
-- Gerenciador de pacotes (npm, yarn ou pnpm)
-
-### Passo a Passo
-
-Clone o repositório:
+### Com Docker (recomendado)
 
 ```bash
-git clone [https://github.com/seu-usuario/seu-repositorio.git](https://github.com/seu-usuario/seu-repositorio.git)
-cd seu-repositorio
+docker compose up -d
+# Backend: http://localhost:3333
+# Swagger: http://localhost:3333/docs
 ```
 
-### Instale as dependências
+### Frontend (local)
 
 ```bash
+cd frontend
 npm install
-# ou
-yarn install
+npm run dev
+# http://localhost:3000
 ```
 
-### Configure as variáveis de ambiente
-
-Crie um arquivo `.env.local` na raiz do frontend e aponte para a sua API backend:
-
-Snippet de código
-NEXT_PUBLIC_API_URL=<http://localhost:3333>
-Execute o servidor de desenvolvimento:
+### Caso o banco esteja vazio (reset de volume)
 
 ```bash
-npm run dev
-# ou
-yarn dev
+docker compose down -v
+docker compose up -d
+# Rodar migration e seed manualmente (ver seção abaixo)
 ```
 
-### Acesse no navegador
+### Migração manual e seed (se necessário)
 
-Acesse <http://localhost:3000> para ver o resultado.
+```bash
+# Conecte no container e execute:
+docker exec -i pizzaria-postgres psql -U pizzaria -d pizzaria < backend/prisma/migrations/20260721155409_init_fix_uuid/migration.sql
 
-### 📜 Licença
+# Depois rode os inserts de seed (tamanhos, bordas, sabores e preços)
+docker exec -i pizzaria-postgres psql -U pizzaria -d pizzaria -c "
+ALTER TABLE tamanhos ADD COLUMN IF NOT EXISTS max_sabores INTEGER NOT NULL DEFAULT 2;
+INSERT INTO tamanhos (nome, fatias, max_sabores, fator_multiplicador) VALUES
+  ('Broto', 4, 2, 0.6), ('Média', 8, 3, 1.0), ('Grande', 10, 4, 1.3);
+INSERT INTO bordas (nome) VALUES ('Catupiry'), ('Cheddar');
+INSERT INTO sabores (nome, descricao) VALUES
+  ('Margherita', 'Muçarela, molho e manjericão'),
+  ('Calabresa', 'Calabresa, cebola e azeitonas'),
+  ('Portuguesa', 'Presunto, ovo, cebola e azeitonas');
+"
+```
 
-- Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes
+## 📊 API Endpoints
+
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| GET | `/api/sabores` | Listar sabores com preços |
+| GET | `/api/tamanhos` | Listar tamanhos |
+| GET | `/api/bordas` | Listar bordas |
+| GET | `/api/ingredientes` | Listar ingredientes |
+| POST | `/api/pedidos` | Criar pedido |
+| GET | `/api/pedidos` | Listar pedidos |
+| PATCH | `/api/pedidos/:id/status` | Atualizar status |
+| GET | `/health` | Healthcheck |
+| GET | `/docs` | Swagger UI |
+
+## 🧹 Limpeza
+
+```bash
+# Remove todos os containers, redes e volumes
+docker compose down -v
+
+# Remove node_modules do Windows (se existir)
+rm -r backend/node_modules
+rm -r frontend/.next
+```
+
+## 📝 Licença
+
+MIT

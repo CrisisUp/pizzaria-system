@@ -22,8 +22,14 @@ export const tamanhoParamsSchema = z.object({
 // ==========================================
 export const criarBordaSchema = z.object({
   nome: z.string().min(2, 'O nome da borda deve ter pelo menos 2 caracteres'), // Ex: "Catupiry", "Cheddar"
-  descricao: z.string().optional(),
-  precoAdicional: z.number().nonnegative('O preço adicional não pode ser negativo'),
+  bordaPrecos: z
+    .array(
+      z.object({
+        tamanhoId: z.number().int().positive('ID do tamanho inválido'),
+        precoVenda: z.number().nonnegative('O preço de venda não pode ser negativo'),
+      }),
+    )
+    .optional(),
 });
 
 export const atualizarBordaSchema = criarBordaSchema.partial();

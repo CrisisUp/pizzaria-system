@@ -153,7 +153,14 @@ export default function CozinhaPage() {
     setSomHabilitado(!somHabilitado);
   };
 
+  const [confirmandoId, setConfirmandoId] = useState<number | null>(null);
+
   const alterarStatus = async (pedidoId: number, novoStatus: StatusPedido) => {
+    setConfirmandoId(pedidoId);
+  };
+
+  const confirmarAlteracao = async (pedidoId: number, novoStatus: StatusPedido) => {
+    setConfirmandoId(null);
     setAtualizandoId(pedidoId);
     try {
       await api.patch(`/pedidos/${pedidoId}/status`, { status: novoStatus });
@@ -168,6 +175,10 @@ export default function CozinhaPage() {
     } finally {
       setAtualizandoId(null);
     }
+  };
+
+  const cancelarConfirmacao = () => {
+    setConfirmandoId(null);
   };
 
   if (loading) {
@@ -363,7 +374,24 @@ export default function CozinhaPage() {
                               ).toFixed(2)}
                             </span>
 
-                            {proximo && (
+                            {proximo && confirmandoId === pedido.id ? (
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] text-zinc-400">Confirmar?</span>
+                                <button
+                                  onClick={() => confirmarAlteracao(pedido.id, proximo)}
+                                  disabled={atualizandoId === pedido.id}
+                                  className="text-xs bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-400 border border-emerald-500/40 px-2 py-1 rounded transition-all font-medium disabled:opacity-50 cursor-pointer"
+                                >
+                                  {atualizandoId === pedido.id ? '...' : 'Sim'}
+                                </button>
+                                <button
+                                  onClick={cancelarConfirmacao}
+                                  className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-400 border border-zinc-700 px-2 py-1 rounded transition-all font-medium cursor-pointer"
+                                >
+                                  Não
+                                </button>
+                              </div>
+                            ) : proximo && (
                               <button
                                 onClick={() => alterarStatus(pedido.id, proximo)}
                                 disabled={atualizandoId === pedido.id}

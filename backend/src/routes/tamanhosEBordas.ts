@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { ZodTypeProvider } from 'fastify-type-provider-zod';
 import {
   atualizarBordaSchema,
@@ -13,26 +13,26 @@ import { TamanhoEBordaService } from '../services/tamanhoEBordaService';
 const service = new TamanhoEBordaService();
 
 // Função auxiliar para converter Decimais do Prisma em Numbers simples
-function formatarTamanho(tamanho: any) {
+function formatarTamanho(tamanho: Record<string, unknown>) {
   return {
     ...tamanho,
     fatorMultiplicador: Number(tamanho.fatorMultiplicador ?? 1),
     maxSabores: tamanho.maxSabores ?? 2,
-    saborPrecos: tamanho.saborPrecos?.map((p: any) => ({
+    saborPrecos: (tamanho.saborPrecos as Record<string, unknown>[])?.map((p) => ({
       ...p,
       precoVenda: Number(p.precoVenda),
     })),
-    bordaPrecos: tamanho.bordaPrecos?.map((p: any) => ({
+    bordaPrecos: (tamanho.bordaPrecos as Record<string, unknown>[])?.map((p) => ({
       ...p,
       precoVenda: Number(p.precoVenda),
     })),
   };
 }
 
-function formatarBorda(borda: any) {
+function formatarBorda(borda: Record<string, unknown>) {
   return {
     ...borda,
-    bordaPrecos: borda.bordaPrecos?.map((p: any) => ({
+    bordaPrecos: (borda.bordaPrecos as Record<string, unknown>[])?.map((p) => ({
       ...p,
       precoVenda: Number(p.precoVenda),
     })),
@@ -68,7 +68,7 @@ export async function tamanhosEBordasRoutes(app: FastifyInstance) {
   // ROTAS DE TAMANHOS (GET /api/tamanhos-e-bordas/tamanhos E GET /api/tamanhos)
   // ==========================================
 
-  const getTamanhosHandler = async (_request: any, reply: any) => {
+  const getTamanhosHandler = async (_request: FastifyRequest, reply: FastifyReply) => {
     try {
       const tamanhos = await service.listarTamanhos();
       return reply.send(tamanhos.map(formatarTamanho));
@@ -140,7 +140,7 @@ export async function tamanhosEBordasRoutes(app: FastifyInstance) {
   // ROTAS DE BORDAS (GET /api/tamanhos-e-bordas/bordas E GET /api/bordas)
   // ==========================================
 
-  const getBordasHandler = async (_request: any, reply: any) => {
+  const getBordasHandler = async (_request: FastifyRequest, reply: FastifyReply) => {
     try {
       const bordas = await service.listarBordas();
       return reply.send(bordas.map(formatarBorda));

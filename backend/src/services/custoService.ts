@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 interface SaborSelecionado {
   saborTamanhoId: number; // ID da combinação Sabor + Tamanho
@@ -28,7 +26,7 @@ interface ResultadoCustoPizza {
 export async function calcularCustoPizza(input: ItemPizzaInput): Promise<ResultadoCustoPizza> {
   let custoSabores = 0;
   let custoBorda = 0;
-  const detalhamentoMap = new Map<number, { nome: string; quantidadeCalculada: number; unidade: string; custoCalculado: number }>();
+  const detalhamentoMap = new Map<string, { nome: string; quantidadeCalculada: number; unidade: string; custoCalculado: number }>();
 
   // 1. Calcular custo dos sabores (recheio)
   for (const itemSabor of input.sabores) {

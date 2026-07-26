@@ -30,10 +30,13 @@ app.setSerializerCompiler(serializerCompiler);
 
 const prisma = new PrismaClient();
 
-// 3. Registre o CORS permitindo todos os métodos HTTP (incluindo PATCH)
+// 3. Registre o CORS com origens configuráveis via variável de ambiente
+const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
+const corsOrigins = corsOrigin.split(',').map((s) => s.trim());
+
 app.register(cors, {
-  origin: '*', // ou 'http://localhost:3000'
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], // 👈 Adicione PATCH aqui!
+  origin: corsOrigins,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 });
 
 // 4. OpenAPI / Swagger Documentation

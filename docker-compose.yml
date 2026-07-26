@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pizzaria-postgres
+    restart: unless-stopped
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_USER: pizzaria
+      POSTGRES_PASSWORD: pizzaria123
+      POSTGRES_DB: pizzaria
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - pizzaria-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: pizzaria-backend
+    restart: unless-stopped
+    ports:
+      - "3333:3333"
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/prisma:/app/prisma
+      - ./backend/.env:/app/.env
+      - ./tsconfig.json:/app/tsconfig.json
+    environment:
+      DATABASE_URL: "postgresql://pizzaria:pizzaria123@postgres:5432/pizzaria?schema=public"
+      PORT: "3333"
+      CORS_ORIGIN: "http://localhost:3000"
+    networks:
+      - pizzaria-network
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+
+networks:
+  pizzaria-network:
+    driver: bridge

@@ -11,30 +11,13 @@ import { SaborService } from '../services/saborService';
 const saborRepository = new PrismaSaborRepository();
 const service = new SaborService(saborRepository);
 
-// Função auxiliar para converter os campos Decimal do Prisma para Number
-function formatarSabor(sabor: any) {
-  if (!sabor) return sabor;
-
-  return {
-    ...sabor,
-    saborPrecos: sabor.saborPrecos?.map((p: any) => ({
-      ...p,
-      precoVenda: Number(p.precoVenda),
-    })),
-    fichaTecnica: sabor.fichaTecnica?.map((f: any) => ({
-      ...f,
-      quantidadeUsada: Number(f.quantidadeUsada),
-    })),
-  };
-}
-
 export async function saboresRoutes(app: FastifyInstance) {
   const server = app.withTypeProvider<ZodTypeProvider>();
 
   // 1. Listar todos os sabores (GET /api/sabores)
   server.get('/', async () => {
     const sabores = await service.listar();
-    return sabores.map(formatarSabor);
+    return sabores;
   });
 
   // 2. Buscar por ID (GET /api/sabores/:id)
@@ -52,13 +35,13 @@ export async function saboresRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: 'Sabor não encontrado' });
     }
 
-    return formatarSabor(sabor);
+    return sabor;
   });
 
   // 3. Criar Sabor
   server.post('/', { schema: criarSaborSchema }, async (request, reply) => {
     const sabor = await service.criar(request.body as any);
-    return reply.status(201).send(formatarSabor(sabor));
+    return reply.status(201).send(sabor);
   });
 
   // 4. Atualizar Sabor
@@ -71,7 +54,7 @@ export async function saboresRoutes(app: FastifyInstance) {
     }
 
     const sabor = await service.atualizar(saborId, request.body as any);
-    return formatarSabor(sabor);
+    return sabor;
   });
 
   // 5. Atualizar Ficha Técnica

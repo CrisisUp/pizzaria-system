@@ -7,21 +7,20 @@ export interface PrecoTamanhoItem {
   custoProducao?: number;
   margemLucroBruta?: number;
 }
+
 export interface Sabor {
   id: number;
   nome: string;
   descricao: string;
-  categoria?: string;
-  imagemUrl?: string;
   precosETamanhos?: PrecoTamanhoItem[];
   saborPrecos?: PrecoTamanhoItem[];
 }
+
 export interface BordaPreco {
   id?: number;
   bordaTamanhoId?: number;
   tamanhoId: number;
   precoVenda?: number | string;
-  precoAdicional?: number | string;
 }
 
 export interface BordaTamanho {
@@ -40,41 +39,42 @@ export interface ItemPedidoSabor {
   pedidoItemId: number;
   saborTamanhoId: number;
   fracao: string | number;
-  sabor?: {
+  precoSaborAplicado?: number | string;
+  saborTamanho?: {
     id: number;
-    nome: string;
+    sabor?: {
+      id: number;
+      nome: string;
+    };
   };
-  // Caso a API retorne diretamente o nome no objeto principal:
-  nome?: string; 
 }
+
 export interface Tamanho {
   id: number;
   nome: string;
   fatias: number;
   maxSabores: number;
   fatorMultiplicador?: number;
-  precoBase?: number;
 }
+
 export interface Borda {
   id: number;
   nome: string;
-  precoAdicional?: number | string;
   bordaPrecos?: BordaPreco[];
   precosETamanhos?: BordaPreco[];
 }
+
 export interface ItemPedido {
   id: number;
   quantidade: number;
   observacoes?: string | null;
   tamanhoId: number;
   tamanho?: Tamanho;
-  
-  // 🎯 Atualize estes dois campos:
   bordaTamanhoId?: number | null;
   bordaTamanho?: BordaTamanho | null;
-  
   sabores?: ItemPedidoSabor[];
   subtotal?: number | string;
+  precoUnitarioFinal?: number | string;
 }
 
 export type StatusPedido = 'RECEBIDO' | 'EM_PREPARO' | 'EM_TRANSPORTE' | 'CONCLUIDO' | 'CANCELADO';
@@ -82,14 +82,15 @@ export type StatusPedido = 'RECEBIDO' | 'EM_PREPARO' | 'EM_TRANSPORTE' | 'CONCLU
 export interface Pedido {
   id: number;
   clienteNome: string;
-  clienteTelefone?: string | null;  // 👈 Adicionado
-  enderecoEntrega?: string | null;  // 👈 Adicionado
-  tipoPedido?: 'MESA' | 'DELIVERY' | 'BALCAO' | string; // 👈 Adicionado
+  clienteTelefone?: string | null;
+  enderecoEntrega?: string | null;
+  tipoPedido?: 'MESA' | 'DELIVERY' | 'BALCAO';
   status: StatusPedido;
   valorTotal: number | string;
   criadoEm: string;
   itens: ItemPedido[];
 }
+
 export interface ItemPizza {
   tamanho: Tamanho | null;
   borda: Borda | null;

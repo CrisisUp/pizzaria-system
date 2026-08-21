@@ -116,7 +116,8 @@ export default function CozinhaPage() {
 
     buscarPedidosIniciais();
 
-    const socket = io('http://localhost:3333/api', {
+    const socket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333', {
+      path: '/api/socket.io',
       transports: ['websocket'],
     });
 
@@ -125,14 +126,12 @@ export default function CozinhaPage() {
       console.log('🍕 Novo pedido recebido via WebSocket:', novoPedido);
       setPedidos((prev) => [novoPedido, ...prev]);
 
-      // Tocamos o som apenas se o usuário ativou o áudio na tela
       if (somRef.current) {
         tocarSomNovoPedido();
       }
     };
 
     socket.on('pedido:criado', handleNovoPedido);
-    socket.on('novoPedido', handleNovoPedido);
 
     socket.on('pedido:atualizado', (pedidoAtualizado: Pedido) => {
       console.log('🔄 Status de pedido atualizado via WebSocket:', pedidoAtualizado);
@@ -144,7 +143,6 @@ export default function CozinhaPage() {
     return () => {
       isMounted = false;
       socket.off('pedido:criado', handleNovoPedido);
-      socket.off('novoPedido', handleNovoPedido);
       socket.off('pedido:atualizado');
       socket.disconnect();
     };
@@ -261,9 +259,6 @@ export default function CozinhaPage() {
                   ) : (
                     pedidosColuna.map((pedido) => {
                       const proximo = PROXIMO_STATUS[pedido.status];
-                      const dataCriacao =
-                        (pedido as unknown as { criadoEm?: string }).criadoEm ||
-                        (pedido as unknown as { createdAt?: string }).createdAt;
 
                       return (
                         <div
@@ -316,8 +311,8 @@ export default function CozinhaPage() {
                             </div>
 
                             <span className="text-[10px] text-zinc-500 shrink-0">
-                              {dataCriacao
-                                ? new Date(dataCriacao).toLocaleTimeString([], {
+                              {pedido.criadoEm
+                                ? new Date(pedido.criadoEm).toLocaleTimeString([], {
                                     hour: '2-digit',
                                     minute: '2-digit',
                                   })
@@ -341,18 +336,7 @@ export default function CozinhaPage() {
                                   </div>
                                   <p className="text-zinc-400 pl-4">
                                     {item.sabores
-                                      ?.map(
-                                        (s) =>
-                                          (
-                                            s as unknown as {
-                                              saborTamanho?: { sabor?: { nome: string } };
-                                              sabor?: { nome: string };
-                                              nome?: string;
-                                            }
-                                          ).saborTamanho?.sabor?.nome ||
-                                          (s as unknown as { sabor?: { nome: string } }).sabor?.nome ||
-                                          (s as unknown as { nome?: string }).nome
-                                      )
+                                      ?.map((s) => s.saborTamanho?.sabor?.nome)
                                       .filter(Boolean)
                                       .join(', ')}
                                   </p>
@@ -371,11 +355,7 @@ export default function CozinhaPage() {
                           <div className="flex items-center justify-between pt-1">
                             <span className="text-xs font-bold text-zinc-300">
                               R${' '}
-                              {Number(
-                                (pedido as unknown as { valorTotal?: number | string }).valorTotal ||
-                                  (pedido as unknown as { total?: number | string }).total ||
-                                  0
-                              ).toFixed(2)}
+                              {Number(pedido.valorTotal || 0).toFixed(2)}
                             </span>
 
                             {proximo && confirmandoId === pedido.id ? (

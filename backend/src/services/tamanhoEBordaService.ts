@@ -4,8 +4,9 @@ import { PrismaBordaRepository } from '../repositories/prisma/PrismaBordaReposit
 
 export interface CriarTamanhoDTO {
   nome: string;
-  maxSabores: number;
   fatias: number;
+  maxSabores: number;
+  fatorMultiplicador: number;
 }
 
 export interface CriarBordaDTO {

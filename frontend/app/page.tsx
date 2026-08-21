@@ -1,7 +1,7 @@
 'use client';
 
 import axios from 'axios';
-import { CheckCircle, Pizza, Plus, Volume2, VolumeX } from 'lucide-react';
+import { CheckCircle, Pizza, Plus, ShoppingBag, Volume2, VolumeX } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from './services/api';
 import { Borda, BordaPreco, ItemPizza, Sabor, Tamanho } from './types/pizzaria';

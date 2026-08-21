@@ -14,27 +14,24 @@ const service = new SaborService(saborRepository);
 export async function saboresRoutes(app: FastifyInstance) {
   const server = app.withTypeProvider<ZodTypeProvider>();
 
-  // 1. Listar todos os sabores (GET /api/sabores)
+  // 1. Listar todos os sabores
   server.get('/', async () => {
-    const sabores = await service.listar();
-    return sabores;
+    return service.listar();
   });
 
-  // 2. Buscar por ID (GET /api/sabores/:id)
+  // 2. Buscar por ID
   server.get('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const saborId = Number(id);
 
-    if (!id || isNaN(saborId)) {
-      return reply.status(400).send({ error: 'O ID informado deve ser um número válido.' });
+    if (isNaN(saborId)) {
+      return reply.status(400).send({ error: 'ID inválido.' });
     }
 
     const sabor = await service.buscarPorId(saborId);
-
     if (!sabor) {
       return reply.status(404).send({ error: 'Sabor não encontrado' });
     }
-
     return sabor;
   });
 

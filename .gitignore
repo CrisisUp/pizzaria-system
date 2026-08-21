@@ -25,6 +25,7 @@ build/
 out/
 .next/
 .nuxt/
+*.tsbuildinfo
 
 # ==========================================
 # 4. LOGS E DEBUG

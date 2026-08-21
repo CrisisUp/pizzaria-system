@@ -1,7 +1,6 @@
 import { FichaTecnica, Ingrediente, Sabor, SaborTamanhoPreco, Tamanho } from '@prisma/client';
-import { AtualizarSaborInput, CriarSaborInput, FichaTecnicaInput } from '../services/saborService';
+import { AtualizarSaborInput, CriarSaborInput, FichaTecnicaInput } from '../types/sabor';
 
-// Tipo com os relacionamentos do Prisma necessários para os cálculos de custo
 export type SaborComRelacionamentos = Sabor & {
   saborPrecos: (SaborTamanhoPreco & {
     tamanho: Tamanho;

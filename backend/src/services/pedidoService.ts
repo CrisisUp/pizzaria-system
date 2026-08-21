@@ -216,6 +216,15 @@ export class PedidoService {
       return await tx.pedido.update({
         where: { id },
         data: { status: novoStatus },
+        include: {
+          itens: {
+            include: {
+              tamanho: true,
+              bordaTamanho: { include: { borda: true } },
+              sabores: { include: { saborTamanho: { include: { sabor: true } } } },
+            },
+          },
+        },
       });
     });
   }

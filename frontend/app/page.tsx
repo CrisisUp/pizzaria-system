@@ -1,7 +1,7 @@
 'use client';
 
 import axios from 'axios';
-import { CheckCircle, Pizza, Plus, ShoppingBag, Volume2, VolumeX } from 'lucide-react';
+import { CheckCircle, Pizza, Plus, Volume2, VolumeX } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from './services/api';
 import { Borda, BordaPreco, ItemPizza, Sabor, Tamanho } from './types/pizzaria';
@@ -153,12 +153,9 @@ export default function Home() {
       const relacao =
         listaPrecos.find((p) => Number(p.tamanhoId) === Number(tamanhoId)) || listaPrecos[0];
 
-      const valorRelacao = parsePreco(relacao?.precoVenda ?? relacao?.precoAdicional);
+      const valorRelacao = parsePreco(relacao?.precoVenda);
       if (valorRelacao > 0) return valorRelacao;
     }
-
-    const valorDireto = parsePreco(borda.precoAdicional);
-    if (valorDireto > 0) return valorDireto;
 
     return 0;
   };

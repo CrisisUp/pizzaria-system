@@ -12,15 +12,19 @@ export const ingredienteFichaTecnicaSchema = z.object({
   unidadeMedida: z.string().optional().default('g'),
 });
 
-export const atualizarSaborSchema = z.object({
-  nome: z.string().optional(),
-  descricao: z.string().optional(),
-  precos: z.array(precoPorTamanhoSchema).optional(),
-});
+export const atualizarSaborSchema = {
+  body: z.object({
+    nome: z.string().optional(),
+    descricao: z.string().optional(),
+    precos: z.array(precoPorTamanhoSchema).optional(),
+  }),
+};
 
-export const atualizarFichaTecnicaSchema = z.object({
-  fichaTecnica: z.array(ingredienteFichaTecnicaSchema),
-});
+export const atualizarFichaTecnicaSchema = {
+  body: z.object({
+    fichaTecnica: z.array(ingredienteFichaTecnicaSchema),
+  }),
+};
 
 export const saborParamsSchema = z.object({
   id: z.string().transform((val) => Number(val)).refine((val) => !isNaN(val), {

@@ -1,34 +1,11 @@
 import { ISaborRepository, SaborComRelacionamentos } from '../repositories/ISaborRepository';
+import { AtualizarSaborInput, CriarSaborInput, FichaTecnicaInput } from '../types/sabor';
 
-export interface PrecoPorTamanhoInput {
-  tamanhoId: number;
-  precoVenda: number;
-}
-
-export interface FichaTecnicaInput {
-  tamanhoId: number;
-  ingredienteId: string;
-  quantidadeUsada: number;
-  unidadeMedida?: string;
-}
-
-export interface CriarSaborInput {
-  nome: string;
-  descricao?: string;
-  precos: PrecoPorTamanhoInput[];
-  fichaTecnica: FichaTecnicaInput[];
-}
-
-export interface AtualizarSaborInput {
-  nome?: string;
-  descricao?: string;
-  precos?: PrecoPorTamanhoInput[];
-}
+export type { AtualizarSaborInput, CriarSaborInput, FichaTecnicaInput };
 
 export class SaborService {
   constructor(private saborRepository: ISaborRepository) {}
 
-  // Função privada auxiliar (Princípio DRY)
   private calcularCustosESabor(sabor: SaborComRelacionamentos) {
     const precosETamanhos = (sabor.saborPrecos || []).map((sp) => {
       const custoProducao = sp.fichaTecnica.reduce((acc, ft) => {
@@ -36,7 +13,6 @@ export class SaborService {
         const qtdEmbalagem = Number(ft.ingrediente.quantidadeEmbalagem) || 1;
         const custoUnitario = precoCompra / qtdEmbalagem;
         const qtdUsada = Number(ft.quantidadeUsada) || 0;
-
         return acc + custoUnitario * qtdUsada;
       }, 0);
 
@@ -60,7 +36,7 @@ export class SaborService {
       id: sabor.id,
       nome: sabor.nome,
       descricao: sabor.descricao,
-      precosETamanhos: precosETamanhos,
+      precosETamanhos,
     };
   }
 

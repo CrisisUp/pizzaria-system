@@ -1,5 +1,5 @@
 import { prisma } from '../../lib/prisma';
-import { AtualizarSaborInput, CriarSaborInput, FichaTecnicaInput } from '../../services/saborService';
+import { AtualizarSaborInput, CriarSaborInput, FichaTecnicaInput } from '../../types/sabor';
 import { ISaborRepository, SaborComRelacionamentos } from '../ISaborRepository';
 
 export class PrismaSaborRepository implements ISaborRepository {

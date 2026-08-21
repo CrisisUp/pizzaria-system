@@ -5,15 +5,16 @@ RUN apk add --no-cache openssl libc6-compat
 
 WORKDIR /app
 
+# 1. Instala dependências ANTES de copiar o código (melhor cache de layers)
 COPY package*.json ./
-RUN npm install --save-dev @types/node
+RUN npm install
 
+# 2. Copia o código e gera o Prisma Client
 COPY . .
-
-# Gera o Prisma Client e faz o build da aplicação
 RUN npx prisma generate
 RUN rm -rf dist && npm run build
 
 EXPOSE 3333
 
-CMD ["/bin/sh", "-c", "npx prisma migrate deploy && npx prisma db seed && npm run start"]
+# Seed NÃO roda aqui — use 'docker compose run backend npx prisma db seed' uma vez
+CMD ["/bin/sh", "-c", "npx prisma migrate deploy && npm run start"]

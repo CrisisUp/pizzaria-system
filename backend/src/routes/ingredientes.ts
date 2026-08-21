@@ -15,8 +15,13 @@ export async function ingredientesRoutes(app: FastifyInstance) {
 
   // GET /api/ingredientes - Listar todos os ingredientes
   typedApp.get('/ingredientes', async (_request, reply) => {
-    const ingredientes = await service.listarTodos();
-    return reply.send(ingredientes);
+    try {
+      const ingredientes = await service.listarTodos();
+      return reply.send(ingredientes);
+    } catch (error: any) {
+      app.log.error(error);
+      return reply.status(500).send({ mensagem: 'Erro ao listar ingredientes.', detalhe: error.message });
+    }
   });
 
   // GET /api/ingredientes/:id - Buscar por ID
@@ -28,14 +33,19 @@ export async function ingredientesRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const { id } = request.params;
-      const ingrediente = await service.buscarPorId(id);
+      try {
+        const { id } = request.params;
+        const ingrediente = await service.buscarPorId(id);
 
-      if (!ingrediente) {
-        return reply.status(404).send({ mensagem: 'Ingrediente não encontrado.' });
+        if (!ingrediente) {
+          return reply.status(404).send({ mensagem: 'Ingrediente não encontrado.' });
+        }
+
+        return reply.send(ingrediente);
+      } catch (error: any) {
+        app.log.error(error);
+        return reply.status(500).send({ mensagem: 'Erro ao buscar ingrediente.', detalhe: error.message });
       }
-
-      return reply.send(ingrediente);
     }
   );
 

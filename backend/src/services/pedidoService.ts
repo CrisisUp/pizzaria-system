@@ -190,11 +190,11 @@ export class PedidoService {
 
               const ingredienteAtual = await tx.ingrediente.findUnique({
                 where: { id: ingredienteFicha.ingredienteId },
-                select: { quantidadeEmbalagem: true },
+                select: { estoqueAtual: true },
               });
 
               if (ingredienteAtual) {
-                const saldoAtual = Number(ingredienteAtual.quantidadeEmbalagem);
+                const saldoAtual = Number(ingredienteAtual.estoqueAtual);
 
                 if (saldoAtual < quantidadeDeducao) {
                   throw new Error(
@@ -206,7 +206,7 @@ export class PedidoService {
 
               await tx.ingrediente.update({
                 where: { id: ingredienteFicha.ingredienteId },
-                data: { quantidadeEmbalagem: { decrement: quantidadeDeducao } },
+                data: { estoqueAtual: { decrement: quantidadeDeducao } },
               });
             }
           }

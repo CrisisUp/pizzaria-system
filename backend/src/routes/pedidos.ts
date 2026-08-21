@@ -37,22 +37,30 @@ export async function pedidosRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      // Converte bordaTamanhoId de null para undefined em cada item
-      const payload = {
-        ...request.body,
-        itens: request.body.itens.map((item) => ({
-          ...item,
-          bordaTamanhoId: item.bordaTamanhoId ?? undefined,
-          tamanhoId: item.tamanhoId ?? undefined,
-        })),
-      };
+      try {
+        // Converte bordaTamanhoId de null para undefined em cada item
+        const payload = {
+          ...request.body,
+          itens: request.body.itens.map((item) => ({
+            ...item,
+            bordaTamanhoId: item.bordaTamanhoId ?? undefined,
+            tamanhoId: item.tamanhoId ?? undefined,
+          })),
+        };
 
-      const novoPedido = await service.criar(payload);
+        const novoPedido = await service.criar(payload);
 
-      // 📢 Emite evento de novo pedido em tempo real
-      getIO().emit('pedido:criado', novoPedido);
+        // 📢 Emite evento de novo pedido em tempo real
+        getIO().emit('pedido:criado', novoPedido);
 
-      return reply.status(201).send(novoPedido);
+        return reply.status(201).send(novoPedido);
+      } catch (error: any) {
+        app.log.error(error);
+        return reply.status(400).send({
+          mensagem: 'Erro ao criar pedido.',
+          detalhe: error.message,
+        });
+      }
     }
   );
 

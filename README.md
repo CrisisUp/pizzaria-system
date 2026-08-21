@@ -26,27 +26,33 @@ Sistema de cardápio digital e gestão de pedidos para pizzaria com painel da co
 
 ```
 pizzaria-system/
-├── backend/                    # API Fastify + Prisma
-│   ├── prisma/                 # Schema + migrations + seed
+├── backend/                         # API Fastify + Prisma
+│   ├── prisma/
+│   │   ├── schema.prisma            # Schema do banco
+│   │   ├── migrations/              # Migrações SQL
+│   │   └── seed.ts                  # Dados iniciais
 │   ├── src/
-│   │   ├── controllers/        # Controller do pedido (legado)
-│   │   ├── lib/                # Singleton PrismaClient
-│   │   ├── repositories/       # Interfaces + implementações Prisma
-│   │   ├── routes/             # Rotas Fastify com validação Zod
-│   │   ├── schemas/            # Schemas Zod
-│   │   ├── services/           # Lógica de negócio
-│   │   ├── server.ts           # Ponto de entrada
-│   │   └── socket.ts           # Configuração Socket.IO
+│   │   ├── lib/prisma.ts            # Singleton PrismaClient
+│   │   ├── types/sabor.ts           # Tipos compartilhados
+│   │   ├── repositories/            # Interfaces + implementações Prisma
+│   │   ├── routes/                  # Rotas Fastify com validação Zod
+│   │   ├── schemas/                 # Schemas Zod
+│   │   ├── services/                # Lógica de negócio
+│   │   ├── server.ts                # Ponto de entrada
+│   │   └── socket.ts                # Configuração Socket.IO
+│   ├── Dockerfile
 │   └── package.json
-├── frontend/                   # Next.js App Router
-│   └── app/
-│       ├── page.tsx            # Cardápio - Monte sua pizza
-│       ├── cozinha/page.tsx    # Painel Kanban da cozinha
-│       ├── services/api.ts     # Axios config
-│       └── types/pizzaria.ts   # Types compartilhados
-├── docker-compose.yml          # Orquestração dos containers
-├── Dockerfile.backend          # Build da imagem do backend
-└── tsconfig.json               # Config TypeScript do monorepo
+├── frontend/                        # Next.js App Router
+│   ├── app/
+│   │   ├── page.tsx                 # Cardápio - Monte sua pizza
+│   │   ├── layout.tsx               # Layout raiz
+│   │   ├── cozinha/page.tsx         # Painel Kanban da cozinha
+│   │   ├── services/api.ts          # Axios config
+│   │   └── types/pizzaria.ts        # Types compartilhados
+│   ├── Dockerfile
+│   └── package.json
+├── docker-compose.yml               # Orquestração dos containers
+└── README.md
 ```
 
 ## 🔧 Como Rodar
@@ -54,8 +60,14 @@ pizzaria-system/
 ### Com Docker (recomendado)
 
 ```bash
+# Suba todos os serviços
 docker compose up -d
+
+# Execute o seed uma única vez
+docker compose exec backend npx prisma db seed
+
 # Backend: http://localhost:3333
+# Frontend: http://localhost:3000
 # Swagger: http://localhost:3333/docs
 ```
 
@@ -73,40 +85,57 @@ npm run dev
 ```bash
 docker compose down -v
 docker compose up -d
-# Rodar migration e seed manualmente (ver seção abaixo)
-```
-
-### Migração manual e seed (se necessário)
-
-```bash
-# Conecte no container e execute:
-docker exec -i pizzaria-postgres psql -U pizzaria -d pizzaria < backend/prisma/migrations/20260721155409_init_fix_uuid/migration.sql
-
-# Depois rode os inserts de seed (tamanhos, bordas, sabores e preços)
-docker exec -i pizzaria-postgres psql -U pizzaria -d pizzaria -c "
-ALTER TABLE tamanhos ADD COLUMN IF NOT EXISTS max_sabores INTEGER NOT NULL DEFAULT 2;
-INSERT INTO tamanhos (nome, fatias, max_sabores, fator_multiplicador) VALUES
-  ('Broto', 4, 2, 0.6), ('Média', 8, 3, 1.0), ('Grande', 10, 4, 1.3);
-INSERT INTO bordas (nome) VALUES ('Catupiry'), ('Cheddar');
-INSERT INTO sabores (nome, descricao) VALUES
-  ('Margherita', 'Muçarela, molho e manjericão'),
-  ('Calabresa', 'Calabresa, cebola e azeitonas'),
-  ('Portuguesa', 'Presunto, ovo, cebola e azeitonas');
-"
+docker compose exec backend npx prisma db seed
 ```
 
 ## 📊 API Endpoints
 
+### Sabores
 | Método | Rota | Descrição |
 | --- | --- | --- |
-| GET | `/api/sabores` | Listar sabores com preços |
-| GET | `/api/tamanhos` | Listar tamanhos |
-| GET | `/api/bordas` | Listar bordas |
-| GET | `/api/ingredientes` | Listar ingredientes |
-| POST | `/api/pedidos` | Criar pedido |
-| GET | `/api/pedidos` | Listar pedidos |
-| PATCH | `/api/pedidos/:id/status` | Atualizar status |
-| GET | `/health` | Healthcheck |
+| GET | `/api/sabores` | Listar todos os sabores com preços |
+| GET | `/api/sabores/:id` | Buscar sabor por ID |
+| POST | `/api/sabores` | Criar novo sabor |
+| PUT | `/api/sabores/:id` | Atualizar sabor |
+| DELETE | `/api/sabores/:id` | Deletar sabor |
+| PUT | `/api/sabores/:id/ficha-tecnica` | Atualizar ficha técnica |
+
+### Tamanhos
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| GET | `/api/tamanhos` | Listar todos os tamanhos |
+| POST | `/api/tamanhos` | Criar novo tamanho |
+| PUT | `/api/tamanhos/:id` | Atualizar tamanho |
+| DELETE | `/api/tamanhos/:id` | Deletar tamanho |
+
+### Bordas
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| GET | `/api/bordas` | Listar todas as bordas |
+| POST | `/api/bordas` | Criar nova borda |
+| PUT | `/api/bordas/:id` | Atualizar borda |
+| DELETE | `/api/bordas/:id` | Deletar borda |
+
+### Ingredientes
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| GET | `/api/ingredientes` | Listar todos os ingredientes |
+| GET | `/api/ingredientes/:id` | Buscar ingrediente por ID |
+| POST | `/api/ingredientes` | Criar novo ingrediente |
+| PUT | `/api/ingredientes/:id` | Atualizar ingrediente |
+| DELETE | `/api/ingredientes/:id` | Deletar ingrediente |
+
+### Pedidos
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| GET | `/api/pedidos` | Listar todos os pedidos |
+| POST | `/api/pedidos` | Criar novo pedido |
+| PATCH | `/api/pedidos/:id/status` | Atualizar status do pedido |
+
+### Outros
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| GET | `/health` | Healthcheck do servidor |
 | GET | `/docs` | Swagger UI |
 
 ## 🧹 Limpeza
@@ -115,9 +144,8 @@ INSERT INTO sabores (nome, descricao) VALUES
 # Remove todos os containers, redes e volumes
 docker compose down -v
 
-# Remove node_modules do Windows (se existir)
-rm -r backend/node_modules
-rm -r frontend/.next
+# Remove build artifacts
+rm -rf backend/dist frontend/.next
 ```
 
 ## 📝 Licença

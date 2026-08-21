@@ -15,7 +15,7 @@ import {
   Volume2,
   VolumeX,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import { api } from '../services/api';
 import { Pedido, StatusPedido } from '../types/pizzaria';
@@ -71,6 +71,10 @@ export default function CozinhaPage() {
   const [loading, setLoading] = useState(true);
   const [atualizandoId, setAtualizandoId] = useState<number | null>(null);
   const [somHabilitado, setSomHabilitado] = useState(false);
+  const somRef = useRef(false);
+
+  // Sincroniza ref com state para uso dentro de callbacks estáveis
+  useEffect(() => { somRef.current = somHabilitado; }, [somHabilitado]);
 
   // Recarga manual via botão
   const recarregarPedidosManualmente = async () => {
@@ -112,7 +116,7 @@ export default function CozinhaPage() {
 
     buscarPedidosIniciais();
 
-    const socket = io('http://localhost:3333', {
+    const socket = io('http://localhost:3333/api', {
       transports: ['websocket'],
     });
 
@@ -122,7 +126,7 @@ export default function CozinhaPage() {
       setPedidos((prev) => [novoPedido, ...prev]);
 
       // Tocamos o som apenas se o usuário ativou o áudio na tela
-      if (somHabilitado) {
+      if (somRef.current) {
         tocarSomNovoPedido();
       }
     };
@@ -144,7 +148,7 @@ export default function CozinhaPage() {
       socket.off('pedido:atualizado');
       socket.disconnect();
     };
-  }, [somHabilitado]);
+  }, []); // socket só conecta uma vez
 
   const alternarSom = () => {
     if (!somHabilitado) {

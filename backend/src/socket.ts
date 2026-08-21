@@ -8,6 +8,7 @@ export function initSocket(httpServer: HttpServer) {
   const corsOrigins = corsOrigin.split(',').map((s) => s.trim());
 
   io = new Server(httpServer, {
+    path: '/api/socket.io',
     cors: {
       origin: corsOrigins,
       methods: ['GET', 'POST'],

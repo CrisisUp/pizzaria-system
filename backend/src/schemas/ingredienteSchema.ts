@@ -7,8 +7,9 @@ export const criarIngredienteSchema = z.object({
   quantidadeEmbalagem: z.number().positive('A quantidade por embalagem deve ser positiva'),
 });
 
-export const atualizarIngredienteSchema = criarIngredienteSchema.partial();
-
+// Força a conversão para string, aceitando string ou number de entrada
 export const ingredienteParamsSchema = z.object({
-  id: z.string().uuid('O ID do ingrediente é inválido'), // Usando uuid para validar IDs no formato UUID
+  id: z.union([z.string(), z.number()]).transform((val) => String(val)),
 });
+
+export const atualizarIngredienteSchema = criarIngredienteSchema.partial();

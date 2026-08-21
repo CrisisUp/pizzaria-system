@@ -1,11 +1,11 @@
 import { FastifyInstance } from 'fastify';
 import { ZodTypeProvider } from 'fastify-type-provider-zod';
-import { IngredienteService } from '../services/ingredienteService';
 import {
-  criarIngredienteSchema,
   atualizarIngredienteSchema,
+  criarIngredienteSchema,
   ingredienteParamsSchema,
 } from '../schemas/ingredienteSchema';
+import { IngredienteService } from '../services/ingredienteService';
 
 const service = new IngredienteService();
 

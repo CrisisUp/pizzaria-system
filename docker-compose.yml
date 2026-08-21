@@ -16,8 +16,8 @@ services:
 
   backend:
     build:
-      context: .
-      dockerfile: Dockerfile.backend
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: pizzaria-backend
     restart: unless-stopped
     ports:
@@ -26,7 +26,6 @@ services:
       - ./backend/src:/app/src
       - ./backend/prisma:/app/prisma
       - ./backend/.env:/app/.env
-      - ./tsconfig.json:/app/tsconfig.json
     environment:
       DATABASE_URL: "postgresql://pizzaria:pizzaria123@postgres:5432/pizzaria?schema=public"
       PORT: "3333"
@@ -34,7 +33,23 @@ services:
     networks:
       - pizzaria-network
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: "http://localhost:3333"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3333
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - pizzaria-network
 
 volumes:
   postgres_data:

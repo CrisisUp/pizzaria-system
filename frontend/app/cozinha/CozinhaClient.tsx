@@ -134,12 +134,17 @@ export default function CozinhaPage() {
 
     buscarPedidosIniciais();
 
+    const socketPort = process.env.NEXT_PUBLIC_SOCKET_PORT || '3333';
     const socketUrl = typeof window !== 'undefined'
-      ? `${window.location.protocol}//${window.location.hostname}:3333`
+      ? `${window.location.protocol}//${window.location.hostname}:${socketPort}`
       : 'http://backend:3333';
     const socket = io(socketUrl, {
       path: '/api/socket.io',
       transports: ['websocket'],
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('🔌 Erro de conexão WebSocket:', err.message);
     });
 
     // ⚡ Trata novos pedidos e aciona o áudio

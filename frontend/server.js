@@ -20,7 +20,7 @@ app.prepare().then(() => {
         const response = await fetch(backendUrl, {
           method: req.method,
           headers: { ...req.headers, host: 'backend:3333' },
-          body: ['POST', 'PUT', 'PATCH'].includes(req.method) ? await collectBody(req) : undefined,
+          body: ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) ? await collectBody(req) : undefined,
         });
 
         res.writeHead(response.status, {

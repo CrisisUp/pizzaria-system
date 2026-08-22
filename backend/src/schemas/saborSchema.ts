@@ -33,18 +33,10 @@ export const saborParamsSchema = z.object({
 });
 
 export const criarSaborBodySchema = z.object({
-  nome: z.string().min(1),
+  nome: z.string().min(1, 'Nome do sabor é obrigatório'),
   descricao: z.string().optional(),
-  precos: z.array(z.object({
-    tamanhoId: z.number(),
-    precoVenda: z.number(),
-  })),
-  fichaTecnica: z.array(z.object({
-    tamanhoId: z.number(),
-    ingredienteId: z.string(),
-    quantidadeUsada: z.number(),
-    unidadeMedida: z.string().optional(),
-  })),
+  precos: z.array(precoPorTamanhoSchema).min(1, 'Pelo menos um preço deve ser informado'),
+  fichaTecnica: z.array(ingredienteFichaTecnicaSchema),
 });
 
 export const criarSaborSchema = {

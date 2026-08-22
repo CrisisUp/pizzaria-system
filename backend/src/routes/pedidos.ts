@@ -93,6 +93,7 @@ export async function pedidosRoutes(app: FastifyInstance) {
 
         // 🔔 Push: notifica mudança de status
         const statusLabels: Record<string, string> = {
+          RECEBIDO: '📞 Pedido recebido',
           EM_PREPARO: '👨‍🍳 Em preparo',
           EM_TRANSPORTE: '🛵 Saiu para entrega',
           CONCLUIDO: '✅ Pedido pronto!',

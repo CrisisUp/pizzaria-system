@@ -139,7 +139,7 @@ export default function Home() {
   const getPrecoSabor = (sabor: Sabor, tamanhoId?: number): number => {
     if (!tamanhoId || !sabor) return 0;
 
-    const listaPrecos = sabor.precosETamanhos || sabor.saborPrecos || [];
+    const listaPrecos = sabor.precosETamanhos || [];
     const relacao = listaPrecos.find((p) => Number(p.tamanhoId) === Number(tamanhoId));
 
     return parsePreco(relacao?.precoVenda);
@@ -148,7 +148,7 @@ export default function Home() {
   const getPrecoBorda = (borda: Borda | null, tamanhoId?: number): number => {
     if (!borda) return 0;
 
-    const listaPrecos: BordaPreco[] = borda.bordaPrecos || borda.precosETamanhos || [];
+    const listaPrecos: BordaPreco[] = borda.bordaPrecos || [];
     if (listaPrecos.length > 0) {
       const relacao =
         listaPrecos.find((p) => Number(p.tamanhoId) === Number(tamanhoId)) || listaPrecos[0];
@@ -220,12 +220,12 @@ export default function Home() {
       const fracaoCalculada = Number((1 / qtdSabores).toFixed(2));
 
       const saboresPayload = pizza.sabores.map((s) => {
-        const listaPrecos = s.precosETamanhos || s.saborPrecos || [];
+        const listaPrecos = s.precosETamanhos || [];
         const relacao = listaPrecos.find(
           (p) => Number(p.tamanhoId) === Number(pizza.tamanho?.id)
         );
 
-        const saborTamanhoId = relacao?.saborTamanhoId || relacao?.id || s.id;
+        const saborTamanhoId = relacao?.saborTamanhoId || s.id;
 
         return {
           saborTamanhoId: Number(saborTamanhoId),
@@ -237,7 +237,7 @@ export default function Home() {
 
       if (pizza.borda && pizza.tamanho) {
         const listaPrecos: BordaPreco[] =
-          pizza.borda.bordaPrecos || pizza.borda.precosETamanhos || [];
+          pizza.borda.bordaPrecos || [];
 
         const relacaoBorda = listaPrecos.find(
           (bp) => Number(bp.tamanhoId) === Number(pizza.tamanho?.id)

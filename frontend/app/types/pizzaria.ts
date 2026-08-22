@@ -1,5 +1,4 @@
 export interface PrecoTamanhoItem {
-  id?: number;
   saborTamanhoId?: number;
   tamanhoId: number;
   tamanhoNome?: string;
@@ -13,12 +12,10 @@ export interface Sabor {
   nome: string;
   descricao: string | null;
   precosETamanhos?: PrecoTamanhoItem[];
-  saborPrecos?: PrecoTamanhoItem[];
 }
 
 export interface BordaPreco {
   id?: number;
-  bordaTamanhoId?: number;
   tamanhoId: number;
   precoVenda?: number | string;
 }
@@ -61,14 +58,13 @@ export interface Borda {
   id: number;
   nome: string;
   bordaPrecos?: BordaPreco[];
-  precosETamanhos?: BordaPreco[];
 }
 
 export interface ItemPedido {
   id: number;
   quantidade: number;
   observacoes?: string | null;
-  tamanhoId: number;
+  tamanhoId: number | null;
   tamanho?: Tamanho;
   bordaTamanhoId?: number | null;
   bordaTamanho?: BordaTamanho | null;
@@ -84,7 +80,7 @@ export interface Pedido {
   clienteNome: string;
   clienteTelefone?: string | null;
   enderecoEntrega?: string | null;
-  tipoPedido?: 'MESA' | 'DELIVERY' | 'BALCAO';
+  tipoPedido: 'MESA' | 'DELIVERY' | 'BALCAO';
   status: StatusPedido;
   valorTotal: number | string;
   criadoEm: string;

@@ -1,5 +1,13 @@
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
 
+function uint8ToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -53,8 +61,8 @@ export async function subscribeUser(): Promise<PushSubscription | null> {
     body: JSON.stringify({
       endpoint: subscription.endpoint,
       keys: {
-        p256dh: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('p256dh')!))),
-        auth: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('auth')!))),
+        p256dh: uint8ToBase64(new Uint8Array(subscription.getKey('p256dh')!)),
+        auth: uint8ToBase64(new Uint8Array(subscription.getKey('auth')!)),
       },
     }),
   });

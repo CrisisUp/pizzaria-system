@@ -188,6 +188,15 @@ export class PedidoService {
         throw new Error(`Pedido ID ${id} não encontrado.`);
       }
 
+      // Bloqueia cancelamento tardio: só pode cancelar se ainda estiver RECEBIDO
+      if (novoStatus === StatusPedido.CANCELADO && pedido.status !== StatusPedido.RECEBIDO) {
+        throw new Error(
+          `Não é possível cancelar pedido #${id} com status "${pedido.status}". ` +
+          `Pedidos só podem ser cancelados antes do preparo iniciar (status RECEBIDO).`
+        );
+      }
+
+      // Baixa de estoque: ao entrar em EM_PREPARO
       if (novoStatus === StatusPedido.EM_PREPARO && pedido.status !== StatusPedido.EM_PREPARO) {
         for (const item of pedido.itens) {
           for (const saborItem of item.sabores) {

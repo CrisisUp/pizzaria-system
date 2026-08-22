@@ -86,8 +86,12 @@ export async function ingredientesRoutes(app: FastifyInstance) {
       try {
         const atualizado = await service.atualizar(id, request.body);
         return reply.send(atualizado);
-      } catch {
-        return reply.status(404).send({ mensagem: 'Ingrediente não encontrado para atualização.' });
+      } catch (error: any) {
+        if (error.message?.includes('não encontrado')) {
+          return reply.status(404).send({ mensagem: error.message });
+        }
+        app.log.error(error);
+        return reply.status(400).send({ mensagem: 'Erro ao atualizar ingrediente.', detalhe: error.message });
       }
     }
   );
@@ -106,8 +110,15 @@ export async function ingredientesRoutes(app: FastifyInstance) {
       try {
         await service.deletar(id);
         return reply.status(204).send();
-      } catch {
-        return reply.status(404).send({ mensagem: 'Ingrediente não encontrado para exclusão.' });
+      } catch (error: any) {
+        if (error.message?.includes('não encontrado')) {
+          return reply.status(404).send({ mensagem: error.message });
+        }
+        if (error.message?.includes('fichas técnicas') || error.message?.includes('associações')) {
+          return reply.status(409).send({ mensagem: error.message });
+        }
+        app.log.error(error);
+        return reply.status(400).send({ mensagem: 'Erro ao deletar ingrediente.', detalhe: error.message });
       }
     }
   );

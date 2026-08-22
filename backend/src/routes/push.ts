@@ -1,14 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import webpush from 'web-push';
 import { prisma } from '../lib/prisma';
-
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT || 'mailto:admin@pizzaria.local',
-  process.env.VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
+import { sendPushToAll } from '../lib/push';
 
 const pushSubscriptionSchema = z.object({
   endpoint: z.string().url(),
@@ -30,12 +24,12 @@ const notificationPayloadSchema = z.object({
 export async function pushRoutes(app: FastifyInstance) {
   const typedApp = app.withTypeProvider<ZodTypeProvider>();
 
-  // GET /api/vapid-key - Retorna a chave pública VAPID
+  // GET /api/push/vapid-key - Retorna a chave pública VAPID
   typedApp.get('/vapid-key', async () => {
     return { publicKey: process.env.VAPID_PUBLIC_KEY };
   });
 
-  // POST /api/subscribe - Salva a subscription do cliente
+  // POST /api/push/subscribe - Salva a subscription do cliente
   typedApp.post(
     '/subscribe',
     { schema: { body: pushSubscriptionSchema } },
@@ -43,18 +37,10 @@ export async function pushRoutes(app: FastifyInstance) {
       const { endpoint, keys } = request.body;
 
       try {
-        // Upsert: cria ou atualiza se endpoint já existir
         const subscription = await prisma.pushSubscription.upsert({
           where: { endpoint },
-          update: {
-            p256dh: keys.p256dh,
-            auth: keys.auth,
-          },
-          create: {
-            endpoint,
-            p256dh: keys.p256dh,
-            auth: keys.auth,
-          },
+          update: { p256dh: keys.p256dh, auth: keys.auth },
+          create: { endpoint, p256dh: keys.p256dh, auth: keys.auth },
         });
 
         return reply.status(201).send({ success: true, id: subscription.id });
@@ -65,7 +51,7 @@ export async function pushRoutes(app: FastifyInstance) {
     }
   );
 
-  // DELETE /api/unsubscribe - Remove a subscription
+  // DELETE /api/push/unsubscribe - Remove a subscription
   typedApp.delete(
     '/unsubscribe',
     { schema: { body: z.object({ endpoint: z.string().url() }) } },
@@ -73,9 +59,7 @@ export async function pushRoutes(app: FastifyInstance) {
       const { endpoint } = request.body;
 
       try {
-        await prisma.pushSubscription.delete({
-          where: { endpoint },
-        });
+        await prisma.pushSubscription.delete({ where: { endpoint } });
         return reply.send({ success: true });
       } catch (error: any) {
         if (error.code === 'P2025') {
@@ -87,7 +71,7 @@ export async function pushRoutes(app: FastifyInstance) {
     }
   );
 
-  // POST /api/send - Envia notificação para todas as subscriptions
+  // POST /api/push/send - Envia notificação para todas as subscriptions
   typedApp.post(
     '/send',
     { schema: { body: notificationPayloadSchema } },
@@ -95,47 +79,19 @@ export async function pushRoutes(app: FastifyInstance) {
       const payload = request.body;
 
       try {
-        const subscriptions = await prisma.pushSubscription.findMany();
+        const result = await sendPushToAll({
+          title: payload.title,
+          body: payload.body,
+          tag: payload.tag,
+          icon: payload.icon,
+          data: payload.data,
+        });
 
-        if (subscriptions.length === 0) {
+        if (result.sent === 0 && result.failed === 0) {
           return reply.status(404).send({ mensagem: 'Nenhuma subscription cadastrada.' });
         }
 
-        const pushPromises = subscriptions.map(async (sub) => {
-          try {
-            await webpush.sendNotification(
-              {
-                endpoint: sub.endpoint,
-                keys: {
-                  p256dh: sub.p256dh,
-                  auth: sub.auth,
-                },
-              },
-              JSON.stringify({
-                title: payload.title,
-                body: payload.body,
-                icon: payload.icon,
-                badge: payload.badge,
-                tag: payload.tag,
-                data: payload.data,
-              })
-            );
-            return { endpoint: sub.endpoint, success: true };
-          } catch (error: any) {
-            // Se subscription expirada/inválida, remove do banco
-            if (error.statusCode === 410 || error.statusCode === 404) {
-              await prisma.pushSubscription.delete({ where: { endpoint: sub.endpoint } }).catch(() => {});
-            }
-            app.log.error({ endpoint: sub.endpoint }, 'Erro ao enviar push');
-            return { endpoint: sub.endpoint, success: false, error: error.message };
-          }
-        });
-
-        const results = await Promise.all(pushPromises);
-        const sent = results.filter((r) => r.success).length;
-        const failed = results.filter((r) => !r.success).length;
-
-        return reply.send({ total: subscriptions.length, sent, failed, details: results });
+        return reply.send({ total: result.sent + result.failed, sent: result.sent, failed: result.failed });
       } catch (error: any) {
         app.log.error(error);
         return reply.status(500).send({ mensagem: 'Erro ao enviar notificações.', detalhe: error.message });

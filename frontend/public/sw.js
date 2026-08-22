@@ -24,20 +24,19 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: network-first para tudo (API, HTML, assets)
-// Só serve cache quando offline
+// Fetch: network-first, sem cachear chamadas de API
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
-  // Pula requests não-GET e WebSocket
-  if (request.method !== 'GET' || request.url.includes('/api/socket.io')) {
+  // Pula requests não-GET, WebSocket e chamadas de API
+  if (request.method !== 'GET' || request.url.includes('/api/socket.io') || request.url.includes('/api/')) {
     return;
   }
 
   event.respondWith(
     fetch(request)
       .then((response) => {
-        // Cacheia a resposta bem-sucedida
+        // Cacheia apenas assets estáticos, não dados de API
         const clone = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         return response;

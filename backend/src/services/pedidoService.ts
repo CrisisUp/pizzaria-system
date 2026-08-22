@@ -1,7 +1,5 @@
 import { StatusPedido, TipoPedido } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { IPedidoRepository } from '../repositories/IPedidoRepository';
-import { PrismaPedidoRepository } from '../repositories/prisma/PrismaPedidoRepository';
 
 export interface SaborItemInput {
   saborTamanhoId: number;
@@ -25,8 +23,6 @@ export interface CriarPedidoInput {
 }
 
 export class PedidoService {
-  constructor(private readonly pedidoRepository: IPedidoRepository = new PrismaPedidoRepository()) {}
-
   async criar(data: CriarPedidoInput) {
     if (!data.itens || data.itens.length === 0) {
       throw new Error('O pedido deve conter pelo menos um item.');
@@ -151,7 +147,22 @@ export class PedidoService {
   }
 
   async listar() {
-    return this.pedidoRepository.listar();
+    return prisma.pedido.findMany({
+      include: {
+        itens: {
+          include: {
+            tamanho: true,
+            bordaTamanho: { include: { borda: true } },
+            sabores: {
+              include: {
+                saborTamanho: { include: { sabor: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { criadoEm: 'desc' },
+    });
   }
 
   async atualizarStatus(id: number, novoStatus: StatusPedido) {

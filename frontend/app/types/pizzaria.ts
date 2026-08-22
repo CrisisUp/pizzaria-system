@@ -11,7 +11,7 @@ export interface PrecoTamanhoItem {
 export interface Sabor {
   id: number;
   nome: string;
-  descricao: string;
+  descricao: string | null;
   precosETamanhos?: PrecoTamanhoItem[];
   saborPrecos?: PrecoTamanhoItem[];
 }

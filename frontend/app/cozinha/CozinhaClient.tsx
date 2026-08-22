@@ -84,6 +84,13 @@ export default function CozinhaPage() {
   useEffect(() => { somRef.current = somHabilitado; }, [somHabilitado]);
   useEffect(() => { pushRef.current = pushHabilitado; }, [pushHabilitado]);
 
+  // Verifica se já tem subscription ativa ao montar
+  useEffect(() => {
+    isSubscribed().then((sub) => {
+      if (sub) setPushHabilitado(true);
+    }).catch(() => {});
+  }, []);
+
   // Recarga manual via botão
   const recarregarPedidosManualmente = async () => {
     try {
@@ -147,17 +154,17 @@ export default function CozinhaPage() {
 
     socket.on('pedido:criado', handleNovoPedido);
 
-    socket.on('pedido:atualizado', (pedidoAtualizado: Pedido) => {
-      console.log('🔄 Status de pedido atualizado via WebSocket:', pedidoAtualizado);
+    const handlePedidoAtualizado = (pedidoAtualizado: Pedido) => {
       setPedidos((prev) =>
         prev.map((p) => (p.id === pedidoAtualizado.id ? pedidoAtualizado : p))
       );
-    });
+    };
+    socket.on('pedido:atualizado', handlePedidoAtualizado);
 
     return () => {
       isMounted = false;
       socket.off('pedido:criado', handleNovoPedido);
-      socket.off('pedido:atualizado');
+      socket.off('pedido:atualizado', handlePedidoAtualizado);
       socket.disconnect();
     };
   }, []); // socket só conecta uma vez

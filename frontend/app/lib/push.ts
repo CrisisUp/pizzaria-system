@@ -20,6 +20,9 @@ export async function getVapidPublicKey(): Promise<string> {
 
   // Fallback: busca do backend
   const res = await fetch('/api/push/vapid-key');
+  if (!res.ok) {
+    throw new Error('Erro ao buscar chave VAPID do servidor');
+  }
   const data = await res.json();
   return data.publicKey;
 }

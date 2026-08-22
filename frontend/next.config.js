@@ -1,8 +1,14 @@
-// next.config.js ou next.config.mjs
+// next.config.js
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "standalone",
-  // suas outras configurações aqui...
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://backend:3333/api/:path*',
+      },
+    ];
+  },
 };
 
-module.exports = nextConfig; // ou export default nextConfig
+module.exports = nextConfig;

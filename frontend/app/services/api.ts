@@ -1,7 +1,6 @@
 import axios from 'axios';
 
+// URL relativa - custom server.js faz proxy /api -> backend:3333
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL 
-    ? `${process.env.NEXT_PUBLIC_API_URL}/api` 
-    : 'http://localhost:3333/api',
+  baseURL: '/api',
 });

@@ -6,6 +6,7 @@ import { jsonSchemaTransform, serializerCompiler, validatorCompiler } from 'fast
 
 import { ingredientesRoutes } from './routes/ingredientes';
 import { pedidosRoutes } from './routes/pedidos';
+import { pushRoutes } from './routes/push';
 import { saboresRoutes } from './routes/sabores';
 import { tamanhosEBordasRoutes } from './routes/tamanhosEBordas';
 import { initSocket } from './socket';
@@ -45,6 +46,7 @@ app.register(ingredientesRoutes, { prefix: '/api' });
 app.register(saboresRoutes, { prefix: '/api/sabores' });
 app.register(tamanhosEBordasRoutes, { prefix: '/api' });
 app.register(pedidosRoutes, { prefix: '/api/pedidos' });
+app.register(pushRoutes, { prefix: '/api/push' });
 
 // 4. Healthcheck
 app.get('/health', async () => ({ status: 'OK', timestamp: new Date().toISOString() }));

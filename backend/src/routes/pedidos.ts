@@ -6,12 +6,12 @@ import {
   pedidoParamsSchema,
 } from '../schemas/pedidoSchema';
 import { PedidoService } from '../services/pedidoService';
-import { getIO } from '../socket'; // 👈 Import do Socket.IO
+import { getIO } from '../socket';
+import { sendPushToAll } from '../lib/push';
 
 const service = new PedidoService();
 
 export async function pedidosRoutes(app: FastifyInstance) {
-  // Conecta o ZodTypeProvider ao Fastify v5
   const typedApp = app.withTypeProvider<ZodTypeProvider>();
 
   // GET /api/pedidos - Lista todos os pedidos
@@ -28,7 +28,7 @@ export async function pedidosRoutes(app: FastifyInstance) {
     }
   });
 
-  // POST /api/pedidos - Registra um novo pedido com validação automática Zod
+  // POST /api/pedidos - Registra um novo pedido
   typedApp.post(
     '/',
     {
@@ -38,7 +38,6 @@ export async function pedidosRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        // Converte bordaTamanhoId de null para undefined em cada item
         const payload = {
           ...request.body,
           itens: request.body.itens.map((item) => ({
@@ -50,8 +49,17 @@ export async function pedidosRoutes(app: FastifyInstance) {
 
         const novoPedido = await service.criar(payload);
 
-        // 📢 Emite evento de novo pedido em tempo real
+        // 📢 WebSocket: notifica clientes conectados
         getIO().emit('pedido:criado', novoPedido);
+
+        // 🔔 Push: notifica dispositivos com notificações ativadas
+        const tipoLabel = { MESA: '🍽️ Mesa', DELIVERY: '🛵 Delivery', BALCAO: '🛍️ Balcão' }[novoPedido.tipoPedido] || novoPedido.tipoPedido;
+        sendPushToAll({
+          title: '🍕 Novo Pedido!',
+          body: `${tipoLabel} - ${novoPedido.clienteNome} - R$ ${Number(novoPedido.valorTotal).toFixed(2)}`,
+          tag: `pedido-${novoPedido.id}`,
+          data: { url: '/cozinha', pedidoId: novoPedido.id },
+        }).catch((err) => app.log.error({ err }, 'Erro ao enviar push de novo pedido'));
 
         return reply.status(201).send(novoPedido);
       } catch (error: any) {
@@ -64,7 +72,7 @@ export async function pedidosRoutes(app: FastifyInstance) {
     }
   );
 
-  // PATCH /api/pedidos/:id/status - Atualiza status com validação de params e body
+  // PATCH /api/pedidos/:id/status - Atualiza status
   typedApp.patch(
     '/:id/status',
     {
@@ -80,8 +88,26 @@ export async function pedidosRoutes(app: FastifyInstance) {
       try {
         const pedidoAtualizado = await service.atualizarStatus(id, status);
 
-        // 📢 Dispara evento de atualização de status em tempo real
+        // 📢 WebSocket
         getIO().emit('pedido:atualizado', pedidoAtualizado);
+
+        // 🔔 Push: notifica mudança de status
+        const statusLabels: Record<string, string> = {
+          EM_PREPARO: '👨‍🍳 Em preparo',
+          EM_TRANSPORTE: '🛵 Saiu para entrega',
+          CONCLUIDO: '✅ Pedido pronto!',
+          CANCELADO: '❌ Pedido cancelado',
+        };
+
+        const statusLabel = statusLabels[status] || status;
+        if (statusLabel) {
+          sendPushToAll({
+            title: `Pedido #${id}`,
+            body: `${statusLabel} - ${pedidoAtualizado.clienteNome}`,
+            tag: `pedido-${id}-status`,
+            data: { url: '/cozinha', pedidoId: id },
+          }).catch((err) => app.log.error({ err }, 'Erro ao enviar push de status'));
+        }
 
         return reply.send(pedidoAtualizado);
       } catch (error: any) {

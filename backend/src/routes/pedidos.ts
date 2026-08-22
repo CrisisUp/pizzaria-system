@@ -8,6 +8,7 @@ import {
 import { PedidoService } from '../services/pedidoService';
 import { getIO } from '../socket';
 import { sendPushToAll } from '../lib/push';
+import { sanitizeText } from '../lib/sanitize';
 
 const service = new PedidoService();
 
@@ -35,13 +36,21 @@ export async function pedidosRoutes(app: FastifyInstance) {
       schema: {
         body: criarPedidoSchema,
       },
+      config: {
+        rateLimit: { max: 10, timeWindow: '1 minute' },
+      },
     },
     async (request, reply) => {
       try {
         const payload = {
           ...request.body,
+          clienteNome: sanitizeText(request.body.clienteNome),
+          enderecoEntrega: request.body.enderecoEntrega
+            ? sanitizeText(request.body.enderecoEntrega)
+            : request.body.enderecoEntrega,
           itens: request.body.itens.map((item) => ({
             ...item,
+            observacoes: item.observacoes ? sanitizeText(item.observacoes) : item.observacoes,
             bordaTamanhoId: item.bordaTamanhoId ?? undefined,
             tamanhoId: item.tamanhoId ?? undefined,
           })),

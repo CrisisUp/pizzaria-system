@@ -74,7 +74,12 @@ export async function pushRoutes(app: FastifyInstance) {
   // POST /api/push/send - Envia notificação para todas as subscriptions
   typedApp.post(
     '/send',
-    { schema: { body: notificationPayloadSchema } },
+    {
+      schema: { body: notificationPayloadSchema },
+      config: {
+        rateLimit: { max: 3, timeWindow: '1 minute' },
+      },
+    },
     async (request, reply) => {
       const payload = request.body;
 

@@ -9,6 +9,7 @@ import {
   saborParamsSchema,
 } from '../schemas/saborSchema';
 import { SaborService } from '../services/saborService';
+import { sanitizeText } from '../lib/sanitize';
 
 const saborRepository: ISaborRepository = new PrismaSaborRepository();
 const service = new SaborService(saborRepository);
@@ -44,7 +45,12 @@ export async function saboresRoutes(app: FastifyInstance) {
   // 3. Criar Sabor
   server.post('/', { schema: criarSaborSchema }, async (request, reply) => {
     try {
-      const sabor = await service.criar(request.body as any);
+      const body = request.body as any;
+      const sabor = await service.criar({
+        ...body,
+        nome: sanitizeText(body.nome),
+        descricao: body.descricao ? sanitizeText(body.descricao) : body.descricao,
+      });
       return reply.status(201).send(sabor);
     } catch (error: any) {
       app.log.error(error);
@@ -56,7 +62,12 @@ export async function saboresRoutes(app: FastifyInstance) {
   server.put('/:id', { schema: { params: saborParamsSchema, ...atualizarSaborSchema } }, async (request, reply) => {
     try {
       const { id } = request.params;
-      const sabor = await service.atualizar(id, request.body as any);
+      const body = request.body as any;
+      const sabor = await service.atualizar(id, {
+        ...body,
+        nome: body.nome ? sanitizeText(body.nome) : body.nome,
+        descricao: body.descricao ? sanitizeText(body.descricao) : body.descricao,
+      });
       return reply.send(sabor);
     } catch (error: any) {
       app.log.error(error);

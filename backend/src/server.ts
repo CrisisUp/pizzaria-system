@@ -1,4 +1,5 @@
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import Fastify from 'fastify';
@@ -26,7 +27,19 @@ app.register(cors, {
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 });
 
-// 2. Swagger
+// 2. Rate Limiting
+app.register(rateLimit, {
+  max: 100,
+  timeWindow: '1 minute',
+  keyGenerator: (request) => request.ip || request.socket.remoteAddress || '127.0.0.1',
+  errorResponseBuilder: (_request, context) => ({
+    statusCode: 429,
+    error: 'Too Many Requests',
+    mensagem: `Rate limit excedido. Tente novamente em ${Math.ceil(context.ttl / 1000)} segundos.`,
+  }),
+});
+
+// 3. Swagger
 app.register(swagger, {
   openapi: {
     info: {

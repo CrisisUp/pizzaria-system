@@ -36,9 +36,6 @@ jobs:
         run: npm cache clean --force
       - run: npm ci
       - run: npx prisma generate
-      - run: npx prisma db push --force-reset
-        env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/pizzaria_test?schema=public
       - run: npx prisma migrate deploy
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/pizzaria_test?schema=public

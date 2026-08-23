@@ -1,11 +1,11 @@
 import { Server as HttpServer } from 'http';
 import { Server } from 'socket.io';
+import { getCorsOrigins } from './lib/cors';
 
 let io: Server;
 
 export function initSocket(httpServer: HttpServer) {
-  const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
-  const corsOrigins = corsOrigin.split(',').map((s) => s.trim());
+  const corsOrigins = getCorsOrigins();
 
   io = new Server(httpServer, {
     path: '/api/socket.io',

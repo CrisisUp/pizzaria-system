@@ -182,19 +182,35 @@ describe('services/pedidoService', () => {
       await expect(service.atualizarStatus(999, StatusPedido.EM_PREPARO)).rejects.toThrow('Pedido ID 999 não encontrado.')
     })
 
-    it('deve bloquear cancelamento se status não for RECEBIDO', async () => {
+    it('deve permitir cancelamento de EM_PREPARO e restaurar estoque', async () => {
       const { prisma } = await import('../../lib/prisma')
-      vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => {
-        const mockTx = {
-          pedido: {
-            findUnique: vi.fn().mockResolvedValue({ ...pedidoMock, status: StatusPedido.EM_PREPARO }),
-          },
-        }
-        return fn(mockTx)
-      })
+      const pedidoEmPreparo = {
+        ...pedidoMock,
+        status: StatusPedido.EM_PREPARO,
+      }
+      const mockTx = {
+        pedido: {
+          findUnique: vi.fn().mockResolvedValue(pedidoEmPreparo),
+          update: vi.fn().mockResolvedValue({ ...pedidoEmPreparo, status: StatusPedido.CANCELADO }),
+        },
+        ingrediente: {
+          update: vi.fn().mockResolvedValue({ estoqueAtual: 1000 }),
+        },
+        fichaTecnica: {
+          findMany: vi.fn().mockResolvedValue([]),
+        },
+      }
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(mockTx))
 
-      await expect(service.atualizarStatus(1, StatusPedido.CANCELADO)).rejects.toThrow(
-        'Não é possível cancelar pedido #1 com status "EM_PREPARO".'
+      const resultado = await service.atualizarStatus(1, StatusPedido.CANCELADO)
+
+      expect(resultado.status).toBe(StatusPedido.CANCELADO)
+      // Deve chamar increment para restaurar estoque
+      expect(mockTx.ingrediente.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'ing-1' },
+          data: { estoqueAtual: { increment: 100 } },
+        })
       )
     })
 
@@ -255,6 +271,160 @@ describe('services/pedidoService', () => {
       vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(mockTx))
 
       await expect(service.atualizarStatus(1, StatusPedido.EM_PREPARO)).rejects.toThrow('Estoque insuficiente')
+    })
+
+    it('deve restaurar estoque ao cancelar pedido que estava em EM_PREPARO', async () => {
+      const { prisma } = await import('../../lib/prisma')
+      const pedidoComEstoqueBaixado = {
+        ...pedidoMock,
+        status: StatusPedido.EM_PREPARO,
+      }
+      const mockTx = {
+        pedido: {
+          findUnique: vi.fn().mockResolvedValue(pedidoComEstoqueBaixado),
+          update: vi.fn().mockResolvedValue({ ...pedidoComEstoqueBaixado, status: StatusPedido.CANCELADO }),
+        },
+        ingrediente: {
+          update: vi.fn().mockResolvedValue({ estoqueAtual: 1000 }),
+        },
+        fichaTecnica: {
+          findMany: vi.fn().mockResolvedValue([]),
+        },
+      }
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(mockTx))
+
+      const resultado = await service.atualizarStatus(1, StatusPedido.CANCELADO)
+
+      expect(resultado.status).toBe(StatusPedido.CANCELADO)
+      // Deve chamar increment para restaurar estoque
+      expect(mockTx.ingrediente.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'ing-1' },
+          data: { estoqueAtual: { increment: 100 } },
+        })
+      )
+    })
+
+    it('deve baixar estoque da borda ao entrar em EM_PREPARO', async () => {
+      const { prisma } = await import('../../lib/prisma')
+      const pedidoComBorda = {
+        ...pedidoMock,
+        itens: [
+          {
+            id: 1,
+            quantidade: 1,
+            bordaTamanhoId: 2,
+            sabores: [
+              {
+                fracao: 1,
+                saborTamanho: {
+                  fichaTecnica: [
+                    { ingredienteId: 'ing-1', quantidadeUsada: 100 },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      }
+      const mockTx = {
+        pedido: {
+          findUnique: vi.fn().mockResolvedValue(pedidoComBorda),
+          update: vi.fn().mockResolvedValue({ ...pedidoComBorda, status: StatusPedido.EM_PREPARO }),
+        },
+        ingrediente: {
+          findUnique: vi.fn().mockResolvedValue({ estoqueAtual: 1000 }),
+          update: vi.fn().mockResolvedValue({ estoqueAtual: 900 }),
+        },
+        fichaTecnica: {
+          findMany: vi.fn().mockResolvedValue([
+            { ingredienteId: 'ing-borda-1', quantidadeUsada: 50 },
+          ]),
+        },
+      }
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(mockTx))
+
+      await service.atualizarStatus(1, StatusPedido.EM_PREPARO)
+
+      // Deve baixar estoque do ingrediente do sabor
+      expect(mockTx.ingrediente.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'ing-1' },
+          data: { estoqueAtual: { decrement: 100 } },
+        })
+      )
+      // Deve baixar estoque do ingrediente da borda
+      expect(mockTx.ingrediente.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'ing-borda-1' },
+          data: { estoqueAtual: { decrement: 50 } },
+        })
+      )
+    })
+
+    it('deve restaurar estoque da borda ao cancelar pedido em EM_PREPARO', async () => {
+      const { prisma } = await import('../../lib/prisma')
+      const pedidoComBorda = {
+        ...pedidoMock,
+        status: StatusPedido.EM_PREPARO,
+        itens: [
+          {
+            id: 1,
+            quantidade: 1,
+            bordaTamanhoId: 2,
+            bordaTamanho: { id: 2, borda: { id: 1, nome: 'Catupiry' } },
+            sabores: [
+              {
+                fracao: 1,
+                saborTamanho: {
+                  fichaTecnica: [
+                    { ingredienteId: 'ing-1', quantidadeUsada: 100 },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      }
+      const updateCalls: Array<{ where: { id: string }; data: { estoqueAtual: { increment: number } } }> = []
+      const mockTx = {
+        pedido: {
+          findUnique: vi.fn().mockResolvedValue(pedidoComBorda),
+          update: vi.fn().mockResolvedValue({ ...pedidoComBorda, status: StatusPedido.CANCELADO }),
+        },
+        ingrediente: {
+          update: vi.fn().mockImplementation(async (args: any) => {
+            updateCalls.push(args)
+            return { estoqueAtual: 1000 }
+          }),
+        },
+        fichaTecnica: {
+          findMany: vi.fn()
+            // Chamada única: fichas da borda (o sabor usa fichaTecnica pré-carregada)
+            .mockResolvedValue([
+              { ingredienteId: 'ing-borda-1', quantidadeUsada: 50 },
+            ]),
+        },
+      }
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(mockTx))
+
+      const resultado = await service.atualizarStatus(1, StatusPedido.CANCELADO)
+
+      expect(resultado.status).toBe(StatusPedido.CANCELADO)
+      // Deve restaurar estoque do ingrediente do sabor
+      expect(updateCalls).toContainEqual(
+        expect.objectContaining({
+          where: { id: 'ing-1' },
+          data: { estoqueAtual: { increment: 100 } },
+        })
+      )
+      // Deve restaurar estoque do ingrediente da borda
+      expect(updateCalls).toContainEqual(
+        expect.objectContaining({
+          where: { id: 'ing-borda-1' },
+          data: { estoqueAtual: { increment: 50 } },
+        })
+      )
     })
   })
 })

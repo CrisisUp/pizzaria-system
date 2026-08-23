@@ -1,12 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { ZodTypeProvider } from 'fastify-type-provider-zod';
-import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { hashPassword, comparePassword, generateToken, verifyToken } from '../lib/auth';
-import { registerBodySchema, loginBodySchema, authParamsSchema } from '../schemas/authSchema';
-
-const registerSchema = z.object({ body: registerBodySchema });
-const loginSchema = z.object({ body: loginBodySchema });
+import { registerBodySchema, loginBodySchema } from '../schemas/authSchema';
 
 export async function authRoutes(app: FastifyInstance) {
   const server = app.withTypeProvider<ZodTypeProvider>();
@@ -14,10 +10,10 @@ export async function authRoutes(app: FastifyInstance) {
   // POST /api/auth/register
   server.post(
     '/register',
-    { schema: registerSchema },
+    { schema: { body: registerBodySchema } },
     async (request, reply) => {
       try {
-        const { nome, email, senha } = request.body;
+        const { nome, email, senha } = request.body as { nome: string; email: string; senha: string };
 
         // Verifica se email já existe
         const existingUser = await prisma.usuario.findUnique({ where: { email } });
@@ -49,10 +45,10 @@ export async function authRoutes(app: FastifyInstance) {
   // POST /api/auth/login
   server.post(
     '/login',
-    { schema: loginSchema },
+    { schema: { body: loginBodySchema } },
     async (request, reply) => {
       try {
-        const { email, senha } = request.body;
+        const { email, senha } = request.body as { email: string; senha: string };
 
         const usuario = await prisma.usuario.findUnique({ where: { email } });
         if (!usuario) {

@@ -32,8 +32,8 @@ export async function setupTestDatabase() {
     process.env.DATABASE_URL = url
   }
 
-  // Push schema
-  execSync('npx prisma db push --force-reset', {
+  // Apply migrations (consistent with db:deploy script)
+  execSync('npx prisma migrate deploy', {
     cwd: path.resolve(__dirname, '..'),
     env: { ...process.env, DATABASE_URL: url },
     stdio: 'inherit',

@@ -13,6 +13,7 @@ import { saboresRoutes } from './routes/sabores';
 import { tamanhosEBordasRoutes } from './routes/tamanhosEBordas';
 import { initSocket } from './socket';
 import { prisma } from './lib/prisma';
+import { getCorsOrigins } from './lib/cors';
 
 const app = Fastify({ logger: true }).withTypeProvider();
 
@@ -20,8 +21,7 @@ app.setValidatorCompiler(validatorCompiler);
 app.setSerializerCompiler(serializerCompiler);
 
 // 1. CORS com origens configuráveis via variável de ambiente
-const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
-const corsOrigins = corsOrigin.split(',').map((s) => s.trim());
+const corsOrigins = getCorsOrigins();
 
 app.register(cors, {
   origin: corsOrigins,

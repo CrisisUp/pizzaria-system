@@ -1,8 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { ZodTypeProvider } from 'fastify-type-provider-zod';
 import {
-  atualizarIngredienteSchema,
-  criarIngredienteSchema,
+  atualizarIngredienteBodySchema,
+  criarIngredienteBodySchema,
 } from '../schemas/ingredienteSchema';
 import { IngredienteService } from '../services/ingredienteService';
 
@@ -28,7 +28,7 @@ export async function ingredientesRoutes(app: FastifyInstance) {
     '/ingredientes/:id',
     async (request, reply) => {
       try {
-        const { id } = request.params;
+        const { id } = request.params as { id: string };
         const ingrediente = await service.buscarPorId(id);
 
         if (!ingrediente) {
@@ -48,7 +48,7 @@ export async function ingredientesRoutes(app: FastifyInstance) {
     '/ingredientes',
     {
       schema: {
-        body: criarIngredienteSchema,
+        body: criarIngredienteBodySchema,
       },
     },
     async (request, reply) => {
@@ -70,11 +70,11 @@ export async function ingredientesRoutes(app: FastifyInstance) {
     '/ingredientes/:id',
     {
       schema: {
-        body: atualizarIngredienteSchema,
+        body: atualizarIngredienteBodySchema,
       },
     },
     async (request, reply) => {
-      const { id } = request.params;
+      const { id } = request.params as { id: string };
 
       try {
         const atualizado = await service.atualizar(id, request.body);
@@ -93,7 +93,7 @@ export async function ingredientesRoutes(app: FastifyInstance) {
   typedApp.delete(
     '/ingredientes/:id',
     async (request, reply) => {
-      const { id } = request.params;
+      const { id } = request.params as { id: string };
 
       try {
         await service.deletar(id);

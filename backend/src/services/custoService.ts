@@ -40,6 +40,11 @@ export async function calcularCustoPizza(input: ItemPizzaInput): Promise<Resulta
       const embalagem = Number(ft.ingrediente.quantidadeEmbalagem);
       const precoCompra = Number(ft.ingrediente.precoUltimaCompra);
 
+      // Evitar divisão por zero
+      if (embalagem <= 0) {
+        throw new Error(`Ingrediente "${ft.ingrediente.nome}" tem quantidadeEmbalagem inválida (<= 0)`);
+      }
+
       const custoInsumo = (qtdEfetiva / embalagem) * precoCompra;
       custoSabores += custoInsumo;
 
@@ -71,6 +76,11 @@ export async function calcularCustoPizza(input: ItemPizzaInput): Promise<Resulta
       const qtdEfetiva = Number(ft.quantidadeUsada); // Borda é sempre 100%
       const embalagem = Number(ft.ingrediente.quantidadeEmbalagem);
       const precoCompra = Number(ft.ingrediente.precoUltimaCompra);
+
+      // Evitar divisão por zero
+      if (embalagem <= 0) {
+        throw new Error(`Ingrediente "${ft.ingrediente.nome}" tem quantidadeEmbalagem inválida (<= 0)`);
+      }
 
       const custoInsumo = (qtdEfetiva / embalagem) * precoCompra;
       custoBorda += custoInsumo;

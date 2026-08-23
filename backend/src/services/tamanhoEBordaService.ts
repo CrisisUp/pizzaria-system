@@ -47,7 +47,7 @@ export class TamanhoEBordaService {
     return this.bordaRepository.criar(data);
   }
 
-  async atualizarBorda(id: number, data: { nome?: string }) {
+  async atualizarBorda(id: number, data: { nome?: string; bordaPrecos?: Array<{ tamanhoId: number; precoVenda: number }> }) {
     return this.bordaRepository.atualizar(id, data);
   }
 

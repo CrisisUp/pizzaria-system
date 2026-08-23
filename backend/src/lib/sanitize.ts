@@ -1,6 +1,6 @@
 /**
- * Remove tags HTML perigosas e escape de entidades.
- * Seguro para texto livre (clienteNome, observacoes, descricao).
+ * Remove tags HTML perigosas e event handlers (XSS prevention).
+ * Preserva texto normal incluindo < > para expressoes matematicas, codigo, etc.
  */
 
 // Tags HTML perigosas que devem ser removidas
@@ -12,7 +12,7 @@ const EVENT_HANDLERS = /\bon\w+\s*=\s*["'][^"']*["']/gi;
 // JavaScript: URIs
 const JS_URIS = /javascript\s*:/gi;
 
-// Data: URIs perigosos (execução de código)
+// Data: URIs perigosos (execucao de codigo)
 const DATA_URIS = /data\s*:\s*(?:text\/html|application\/x-javascript)/gi;
 
 // SVG com onload (XSS via SVG)
@@ -37,9 +37,6 @@ export function sanitizeText(input: string): string {
 
   // Remove SVG com onload
   clean = clean.replace(SVG_ONLOAD, '');
-
-  // Escape < e > restantes (preserva texto normal)
-  clean = clean.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   return clean.trim();
 }

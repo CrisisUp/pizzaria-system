@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TipoPedidoEnum, StatusPedidoEnum } from './enums';
 
 export const registerBodySchema = z.object({
   nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -24,3 +25,6 @@ export const authParamsSchema = z.object({
     message: 'ID deve ser um número válido',
   }),
 });
+
+// Re-export enums compartilhados
+export { TipoPedidoEnum, StatusPedidoEnum };

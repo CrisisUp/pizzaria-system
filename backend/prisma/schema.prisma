@@ -121,6 +121,7 @@ model FichaTecnica {
   saborTamanho SaborTamanhoPreco? @relation(fields: [saborTamanhoId], references: [id], onDelete: Cascade)
   bordaTamanho BordaTamanhoPreco? @relation(fields: [bordaTamanhoId], references: [id], onDelete: Cascade)
 
+  // Regra de negócio: deve ter saborTamanhoId XOR bordaTamanhoId (validado na aplicação)
   @@map("ficha_tecnica")
 }
 
@@ -175,7 +176,7 @@ model Pedido {
 model PedidoItem {
   id                 Int     @id @default(autoincrement())
   pedidoId           Int     @map("pedido_id")
-  tamanhoId          Int?    @map("tamanho_id")
+  tamanhoId          Int     @map("tamanho_id")
   bordaTamanhoId     Int?    @map("borda_tamanho_id")
   quantidade         Int     @default(1)
   precoBordaAplicado Decimal @default(0.00) @map("preco_borda_aplicado") @db.Decimal(10, 2)
@@ -185,7 +186,7 @@ model PedidoItem {
 
   // Relacionamentos
   pedido       Pedido             @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
-  tamanho      Tamanho?           @relation(fields: [tamanhoId], references: [id])
+  tamanho      Tamanho            @relation(fields: [tamanhoId], references: [id])
   bordaTamanho BordaTamanhoPreco? @relation(fields: [bordaTamanhoId], references: [id])
   sabores      PedidoItemSabor[]
 

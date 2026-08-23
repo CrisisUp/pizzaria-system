@@ -1,12 +1,11 @@
 import { FastifyInstance } from 'fastify';
 import { ZodTypeProvider } from 'fastify-type-provider-zod';
-import { z } from 'zod';
 import { ISaborRepository } from '../repositories/ISaborRepository';
 import { PrismaSaborRepository } from '../repositories/prisma/PrismaSaborRepository';
 import {
-  atualizarFichaTecnicaSchema,
-  atualizarSaborSchema,
-  criarSaborSchema,
+  atualizarFichaTecnicaBodySchema,
+  atualizarSaborBodySchema,
+  criarSaborBodySchema,
   saborParamsSchema,
 } from '../schemas/saborSchema';
 import { SaborService } from '../services/saborService';
@@ -29,9 +28,9 @@ export async function saboresRoutes(app: FastifyInstance) {
   });
 
   // 2. Buscar por ID
-  server.get('/:id', { schema: z.object({ params: saborParamsSchema }) }, async (request, reply) => {
+  server.get('/:id', { schema: { params: saborParamsSchema } }, async (request, reply) => {
     try {
-      const { id } = request.params;
+      const { id } = request.params as { id: number };
       const sabor = await service.buscarPorId(id);
       if (!sabor) {
         return reply.status(404).send({ mensagem: 'Sabor não encontrado.' });
@@ -44,9 +43,9 @@ export async function saboresRoutes(app: FastifyInstance) {
   });
 
   // 3. Criar Sabor
-  server.post('/', { schema: criarSaborSchema }, async (request, reply) => {
+  server.post('/', { schema: { body: criarSaborBodySchema } }, async (request, reply) => {
     try {
-      const body = request.body as any;
+      const body = request.body as { nome: string; descricao?: string; precos: { tamanhoId: number; precoVenda: number }[]; fichaTecnica: { tamanhoId: number; ingredienteId: string; quantidadeUsada: number; unidadeMedida?: string }[] };
       const sabor = await service.criar({
         ...body,
         nome: sanitizeText(body.nome),
@@ -60,18 +59,10 @@ export async function saboresRoutes(app: FastifyInstance) {
   });
 
   // 4. Atualizar Sabor
-  const atualizarSaborFullSchema = z.object({
-    params: z.object({ id: z.string().transform((val) => Number(val)).refine((val) => !isNaN(val), { message: 'ID do sabor deve ser um número válido' }) }),
-    body: z.object({
-      nome: z.string().optional(),
-      descricao: z.string().optional(),
-      precos: z.array(z.object({ tamanhoId: z.number().int().positive(), precoVenda: z.number().positive() })).optional(),
-    }),
-  });
-  server.put('/:id', { schema: atualizarSaborFullSchema }, async (request, reply) => {
+  server.put('/:id', { schema: { params: saborParamsSchema, body: atualizarSaborBodySchema } }, async (request, reply) => {
     try {
-      const { id } = request.params;
-      const body = request.body as any;
+      const { id } = request.params as { id: number };
+      const body = request.body as { nome?: string; descricao?: string; precos?: any[] };
       const sabor = await service.atualizar(id, {
         ...body,
         nome: body.nome ? sanitizeText(body.nome) : body.nome,
@@ -85,9 +76,9 @@ export async function saboresRoutes(app: FastifyInstance) {
   });
 
   // 5. Atualizar Ficha Técnica
-  server.put('/:id/ficha-tecnica', { schema: atualizarFichaTecnicaSchema }, async (request, reply) => {
+  server.put('/:id/ficha-tecnica', { schema: { body: atualizarFichaTecnicaBodySchema } }, async (request, reply) => {
     try {
-      const { id } = request.params;
+      const { id } = request.params as { id: number };
       const resultado = await service.atualizarFichaTecnica(id, request.body as any);
       return reply.send(resultado);
     } catch (error: any) {
@@ -97,9 +88,9 @@ export async function saboresRoutes(app: FastifyInstance) {
   });
 
   // 6. Deletar Sabor
-  server.delete('/:id', { schema: z.object({ params: z.object({ id: z.string().transform((val) => Number(val)).refine((val) => !isNaN(val), { message: 'ID do sabor deve ser um número válido' }) }) }) }, async (request, reply) => {
+  server.delete('/:id', { schema: { params: saborParamsSchema } }, async (request, reply) => {
     try {
-      const { id } = request.params;
+      const { id } = request.params as { id: number };
       await service.deletar(id);
       return reply.status(204).send();
     } catch (error: any) {

@@ -1,12 +1,11 @@
 import { z } from 'zod';
+import { TipoPedidoEnum, StatusPedidoEnum } from './enums';
 
 export const criarPedidoSchema = z.object({
   clienteNome: z.string().min(2, 'Nome do cliente deve ter no mínimo 2 caracteres'),
   clienteTelefone: z.string().optional(),
   enderecoEntrega: z.string().optional(),
-  tipoPedido: z.enum(['BALCAO', 'DELIVERY', 'MESA'], {
-    message: 'Tipo de pedido deve ser BALCAO, DELIVERY ou MESA', // 👈 Ajustado aqui
-  }),
+  tipoPedido: TipoPedidoEnum,
   itens: z.array(
     z.object({
       tamanhoId: z.number().int().positive('ID do tamanho inválido'),
@@ -24,9 +23,7 @@ export const criarPedidoSchema = z.object({
 });
 
 export const atualizarStatusSchema = z.object({
-  status: z.enum(['RECEBIDO', 'EM_PREPARO', 'EM_TRANSPORTE', 'CONCLUIDO', 'CANCELADO'], {
-    message: 'Status do pedido inválido', // 👈 Ajustado aqui
-  }),
+  status: StatusPedidoEnum,
 });
 
 export const pedidoParamsSchema = z.object({

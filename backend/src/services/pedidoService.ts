@@ -7,7 +7,7 @@ export interface SaborItemInput {
 }
 
 export interface ItemPedidoInput {
-  tamanhoId?: number;
+  tamanhoId: number;
   bordaTamanhoId?: number;
   quantidade: number;
   observacoes?: string;
@@ -32,7 +32,7 @@ export class PedidoService {
     return await prisma.$transaction(async (tx) => {
       let valorTotalPedido = 0;
       const itensParaCriar: Array<{
-        tamanhoId?: number | null;
+        tamanhoId: number;
         bordaTamanhoId?: number | null;
         quantidade: number;
         precoBordaAplicado: number;
@@ -61,14 +61,16 @@ export class PedidoService {
           throw new Error('Um ou mais sabores informados não foram encontrados.');
         }
 
-        let precoSaborMaisCaro = 0;
+        // Calcular preço ponderado pela fração (ex: meio-a-meio = média dos preços)
+        const precoSaborPonderado = item.sabores.reduce((acc, saborInput) => {
+          const saborBanco = saboresEncontrados.find((s) => s.id === saborInput.saborTamanhoId);
+          const precoSabor = Number(saborBanco?.precoVenda || 0);
+          return acc + precoSabor * saborInput.fracao;
+        }, 0);
+
         const saboresFormatados = item.sabores.map((saborInput) => {
           const saborBanco = saboresEncontrados.find((s) => s.id === saborInput.saborTamanhoId);
           const precoSabor = Number(saborBanco?.precoVenda || 0);
-
-          if (precoSabor > precoSaborMaisCaro) {
-            precoSaborMaisCaro = precoSabor;
-          }
 
           return {
             saborTamanhoId: saborInput.saborTamanhoId,
@@ -90,7 +92,7 @@ export class PedidoService {
           precoBorda = Number(bordaTamanho.precoVenda);
         }
 
-        const precoUnitarioFinal = precoSaborMaisCaro + precoBorda;
+        const precoUnitarioFinal = precoSaborPonderado + precoBorda;
         const subtotal = precoUnitarioFinal * item.quantidade;
 
         valorTotalPedido += subtotal;
@@ -181,6 +183,11 @@ export class PedidoService {
                   },
                 },
               },
+              bordaTamanho: {
+                include: {
+                  borda: true,
+                },
+              },
             },
           },
         },
@@ -190,16 +197,55 @@ export class PedidoService {
         throw new Error(`Pedido ID ${id} não encontrado.`);
       }
 
-      // Bloqueia cancelamento tardio: só pode cancelar se ainda estiver RECEBIDO
-      if (novoStatus === StatusPedido.CANCELADO && pedido.status !== StatusPedido.RECEBIDO) {
-        throw new Error(
-          `Não é possível cancelar pedido #${id} com status "${pedido.status}". ` +
-          `Pedidos só podem ser cancelados antes do preparo iniciar (status RECEBIDO).`
-        );
+      const statusAnterior = pedido.status;
+
+      // Se cancelando e o estoque já foi baixado (status era EM_PREPARO ou posterior), restaurar estoque
+      const statusComEstoqueBaixado: StatusPedido[] = [
+        StatusPedido.EM_PREPARO,
+        StatusPedido.EM_TRANSPORTE,
+        StatusPedido.CONCLUIDO,
+      ];
+      const estoqueJaBaixado = statusComEstoqueBaixado.includes(statusAnterior);
+
+      if (novoStatus === StatusPedido.CANCELADO && estoqueJaBaixado) {
+        // Restaurar estoque dos ingredientes dos sabores
+        for (const item of pedido.itens) {
+          for (const saborItem of item.sabores) {
+            const fichaTecnica = saborItem.saborTamanho.fichaTecnica || [];
+            const fracaoSabor = Number(saborItem.fracao) || 1;
+            const quantidadePizza = item.quantidade;
+
+            for (const ingredienteFicha of fichaTecnica) {
+              const quantidadeRestauracao =
+                Number(ingredienteFicha.quantidadeUsada) * fracaoSabor * quantidadePizza;
+
+              await tx.ingrediente.update({
+                where: { id: ingredienteFicha.ingredienteId },
+                data: { estoqueAtual: { increment: quantidadeRestauracao } },
+              });
+            }
+          }
+
+          // Restaurar estoque dos ingredientes da borda (se houver)
+          if (item.bordaTamanho) {
+            const fichasBorda = await tx.fichaTecnica.findMany({
+              where: { bordaTamanhoId: item.bordaTamanhoId },
+              include: { ingrediente: true },
+            });
+
+            for (const ft of fichasBorda) {
+              const quantidadeRestauracao = Number(ft.quantidadeUsada) * item.quantidade;
+              await tx.ingrediente.update({
+                where: { id: ft.ingredienteId },
+                data: { estoqueAtual: { increment: quantidadeRestauracao } },
+              });
+            }
+          }
+        }
       }
 
-      // Baixa de estoque: ao entrar em EM_PREPARO
-      if (novoStatus === StatusPedido.EM_PREPARO && pedido.status !== StatusPedido.EM_PREPARO) {
+      // Baixa de estoque: ao entrar em EM_PREPARO (apenas se não estava já em EM_PREPARO ou posterior)
+      if (novoStatus === StatusPedido.EM_PREPARO && !estoqueJaBaixado) {
         for (const item of pedido.itens) {
           for (const saborItem of item.sabores) {
             const fichaTecnica = saborItem.saborTamanho.fichaTecnica || [];
@@ -228,6 +274,38 @@ export class PedidoService {
 
               await tx.ingrediente.update({
                 where: { id: ingredienteFicha.ingredienteId },
+                data: { estoqueAtual: { decrement: quantidadeDeducao } },
+              });
+            }
+          }
+
+          // Baixar estoque da borda (se houver)
+          if (item.bordaTamanhoId) {
+            const fichasBorda = await tx.fichaTecnica.findMany({
+              where: { bordaTamanhoId: item.bordaTamanhoId },
+              include: { ingrediente: true },
+            });
+
+            for (const ft of fichasBorda) {
+              const quantidadeDeducao = Number(ft.quantidadeUsada) * item.quantidade;
+
+              const ingredienteAtual = await tx.ingrediente.findUnique({
+                where: { id: ft.ingredienteId },
+                select: { estoqueAtual: true },
+              });
+
+              if (ingredienteAtual) {
+                const saldoAtual = Number(ingredienteAtual.estoqueAtual);
+                if (saldoAtual < quantidadeDeducao) {
+                  throw new Error(
+                    `Estoque insuficiente de "${ft.ingredienteId}" para borda. ` +
+                    `Disponível: ${saldoAtual.toFixed(3)}, necessário: ${quantidadeDeducao.toFixed(3)}`,
+                  );
+                }
+              }
+
+              await tx.ingrediente.update({
+                where: { id: ft.ingredienteId },
                 data: { estoqueAtual: { decrement: quantidadeDeducao } },
               });
             }

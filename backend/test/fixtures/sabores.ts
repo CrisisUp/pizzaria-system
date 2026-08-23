@@ -1,6 +1,9 @@
 import { PrismaClient } from '@prisma/client'
+import { getIngredienteIds } from './ingredientes'
 
 export async function seedSabores(prisma: PrismaClient, tamanhos: { id: number; nome: string }[]) {
+  const ingredienteIds = await getIngredienteIds(prisma)
+
   const sabores = [
     {
       nome: 'Calabresa',
@@ -10,9 +13,9 @@ export async function seedSabores(prisma: PrismaClient, tamanhos: { id: number; 
         precoVenda: 35 + i * 5,
       })),
       fichaTecnica: tamanhos.flatMap((t, i) => [
-        { tamanhoId: t.id, ingredienteId: 'ing-calabresa', quantidadeUsada: 100 + i * 20, unidadeMedida: 'g' },
-        { tamanhoId: t.id, ingredienteId: 'ing-cebola', quantidadeUsada: 30 + i * 10, unidadeMedida: 'g' },
-        { tamanhoId: t.id, ingredienteId: 'ing-oregano', quantidadeUsada: 5, unidadeMedida: 'g' },
+        { tamanhoId: t.id, ingredienteId: ingredienteIds.calabresa, quantidadeUsada: 100 + i * 20, unidadeMedida: 'g' },
+        { tamanhoId: t.id, ingredienteId: ingredienteIds.cebola, quantidadeUsada: 30 + i * 10, unidadeMedida: 'g' },
+        { tamanhoId: t.id, ingredienteId: ingredienteIds.orégano, quantidadeUsada: 5, unidadeMedida: 'g' },
       ]),
     },
     {
@@ -23,8 +26,8 @@ export async function seedSabores(prisma: PrismaClient, tamanhos: { id: number; 
         precoVenda: 40 + i * 5,
       })),
       fichaTecnica: tamanhos.flatMap((t, i) => [
-        { tamanhoId: t.id, ingredienteId: 'ing-mussarela', quantidadeUsada: 150 + i * 30, unidadeMedida: 'g' },
-        { tamanhoId: t.id, ingredienteId: 'ing-manjericao', quantidadeUsada: 10, unidadeMedida: 'g' },
+        { tamanhoId: t.id, ingredienteId: ingredienteIds.mussarela, quantidadeUsada: 150 + i * 30, unidadeMedida: 'g' },
+        { tamanhoId: t.id, ingredienteId: ingredienteIds.manjericão, quantidadeUsada: 10, unidadeMedida: 'g' },
       ]),
     },
     {
@@ -35,8 +38,8 @@ export async function seedSabores(prisma: PrismaClient, tamanhos: { id: number; 
         precoVenda: 45 + i * 5,
       })),
       fichaTecnica: tamanhos.flatMap((t, i) => [
-        { tamanhoId: t.id, ingredienteId: 'ing-frango', quantidadeUsada: 120 + i * 25, unidadeMedida: 'g' },
-        { tamanhoId: t.id, ingredienteId: 'ing-catupiry', quantidadeUsada: 80 + i * 15, unidadeMedida: 'g' },
+        { tamanhoId: t.id, ingredienteId: ingredienteIds.frango, quantidadeUsada: 120 + i * 25, unidadeMedida: 'g' },
+        { tamanhoId: t.id, ingredienteId: ingredienteIds.catupiry, quantidadeUsada: 80 + i * 15, unidadeMedida: 'g' },
       ]),
     },
     {
@@ -47,11 +50,11 @@ export async function seedSabores(prisma: PrismaClient, tamanhos: { id: number; 
         precoVenda: 50 + i * 5,
       })),
       fichaTecnica: tamanhos.flatMap((t, i) => [
-        { tamanhoId: t.id, ingredienteId: 'ing-presunto', quantidadeUsada: 80 + i * 15, unidadeMedida: 'g' },
-        { tamanhoId: t.id, ingredienteId: 'ing-ovos', quantidadeUsada: 2, unidadeMedida: 'un' },
-        { tamanhoId: t.id, ingredienteId: 'ing-cebola', quantidadeUsada: 30 + i * 10, unidadeMedida: 'g' },
-        { tamanhoId: t.id, ingredienteId: 'ing-azeitona', quantidadeUsada: 20, unidadeMedida: 'g' },
-        { tamanhoId: t.id, ingredienteId: 'ing-ervilha', quantidadeUsada: 30, unidadeMedida: 'g' },
+        { tamanhoId: t.id, ingredienteId: ingredienteIds.presunto, quantidadeUsada: 80 + i * 15, unidadeMedida: 'g' },
+        { tamanhoId: t.id, ingredienteId: ingredienteIds.ovos, quantidadeUsada: 2, unidadeMedida: 'un' },
+        { tamanhoId: t.id, ingredienteId: ingredienteIds.cebola, quantidadeUsada: 30 + i * 10, unidadeMedida: 'g' },
+        { tamanhoId: t.id, ingredienteId: ingredienteIds.azeitona, quantidadeUsada: 20, unidadeMedida: 'g' },
+        { tamanhoId: t.id, ingredienteId: ingredienteIds.ervilha, quantidadeUsada: 30, unidadeMedida: 'g' },
       ]),
     },
   ]

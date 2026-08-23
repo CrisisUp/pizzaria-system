@@ -176,9 +176,9 @@ export async function tamanhosEBordasRoutes(app: FastifyInstance) {
     '/bordas/:id',
     { schema: { params: bordaParamsSchema, body: atualizarBordaSchema } },
     async (request, reply) => {
-      const { id } = request.params;
+      const { id } = request.params as { id: number };
       try {
-        const bordaAtualizada = await service.atualizarBorda(id, request.body);
+        const bordaAtualizada = await service.atualizarBorda(id, request.body as { nome?: string; bordaPrecos?: Array<{ tamanhoId: number; precoVenda: number }> });
         return reply.send(formatarBorda(bordaAtualizada));
       } catch (error: any) {
         app.log.error(error);

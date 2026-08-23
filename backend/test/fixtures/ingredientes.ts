@@ -29,3 +29,10 @@ export async function seedIngredientes(prisma: PrismaClient) {
 
   return prisma.ingrediente.findMany({ orderBy: { nome: 'asc' } })
 }
+
+export async function getIngredienteIds(prisma: PrismaClient) {
+  const ingredientes = await prisma.ingrediente.findMany({
+    select: { id: true, nome: true },
+  })
+  return Object.fromEntries(ingredientes.map((i) => [i.nome.toLowerCase().replace(/\s+/g, ''), i.id]))
+}

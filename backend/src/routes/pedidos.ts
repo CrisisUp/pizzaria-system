@@ -37,9 +37,6 @@ export async function pedidosRoutes(app: FastifyInstance) {
       schema: {
         body: criarPedidoSchema,
       },
-      config: {
-        rateLimit: { max: 10, timeWindow: '1 minute' },
-      },
     },
     async (request, reply) => {
       try {

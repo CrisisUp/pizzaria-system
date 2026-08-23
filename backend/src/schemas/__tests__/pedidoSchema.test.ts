@@ -61,7 +61,7 @@ describe('schemas/pedidoSchema', () => {
       const resultado = schema.safeParse({ body: input })
       expect(resultado.success).toBe(false)
       if (!resultado.success) {
-        expect(resultado.error.issues[0].message).toContain('BALCAO, DELIVERY ou MESA')
+        expect(resultado.error.issues[0].message).toContain('Invalid enum value')
       }
     })
 
@@ -162,7 +162,7 @@ describe('schemas/pedidoSchema', () => {
       const resultado = schema.safeParse({ body: { status: 'INVALIDO' } })
       expect(resultado.success).toBe(false)
       if (!resultado.success) {
-        expect(resultado.error.issues[0].message).toContain('inválido')
+        expect(resultado.error.issues[0].message).toContain('Invalid enum value')
       }
     })
   })

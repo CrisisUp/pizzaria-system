@@ -24,26 +24,37 @@ async function main() {
 
     // 1. TAMANHOS
     console.log('Criando Tamanhos...')
-    const [broto, media, grande] = await Promise.all([
+    const [broto, media, grande, gigante] = await Promise.all([
       prisma.tamanho.create({
         data: {
           nome: 'Broto',
           fatias: 4,
-          fatorMultiplicador: new Prisma.Decimal(0.6)
+          maxSabores: 1,
+          fatorMultiplicador: new Prisma.Decimal(0.75)
         }
       }),
       prisma.tamanho.create({
         data: {
           nome: 'Média',
-          fatias: 8,
+          fatias: 6,
+          maxSabores: 2,
           fatorMultiplicador: new Prisma.Decimal(1.0)
         }
       }),
       prisma.tamanho.create({
         data: {
           nome: 'Grande',
-          fatias: 10,
-          fatorMultiplicador: new Prisma.Decimal(1.3)
+          fatias: 8,
+          maxSabores: 2,
+          fatorMultiplicador: new Prisma.Decimal(1.25)
+        }
+      }),
+      prisma.tamanho.create({
+        data: {
+          nome: 'Gigante',
+          fatias: 12,
+          maxSabores: 3,
+          fatorMultiplicador: new Prisma.Decimal(1.5)
         }
       })
     ])
@@ -104,12 +115,13 @@ async function main() {
 
     // 5. PREÇOS DOS SABORES E BORDAS PARA TODOS OS TAMANHOS
     console.log('Criando Preços dos Sabores e Bordas para todos os tamanhos...')
-    
+
     // Lista com os tamanhos e seus preços base
     const configuracaoTamanhos = [
       { tamanho: broto, precoMargherita: 29.90, precoCalabresa: 32.90, precoPortuguesa: 34.90, precoCatupiry: 6.00, precoCheddar: 7.00 },
       { tamanho: media, precoMargherita: 42.90, precoCalabresa: 45.90, precoPortuguesa: 49.90, precoCatupiry: 8.00, precoCheddar: 10.00 },
       { tamanho: grande, precoMargherita: 52.90, precoCalabresa: 56.90, precoPortuguesa: 59.90, precoCatupiry: 10.00, precoCheddar: 12.00 },
+      { tamanho: gigante, precoMargherita: 62.90, precoCalabresa: 66.90, precoPortuguesa: 69.90, precoCatupiry: 12.00, precoCheddar: 14.00 },
     ]
 
     for (const cfg of configuracaoTamanhos) {
@@ -131,12 +143,86 @@ async function main() {
       })
     }
 
+    // 6. FICHA TÉCNICA - Sabores
+    console.log('Criando Ficha Técnica dos Sabores...')
+    const saborTamanhos = await prisma.saborTamanhoPreco.findMany({
+      include: { sabor: true, tamanho: true },
+    })
+
+    for (const st of saborTamanhos) {
+      const fichaItems: Array<{
+        saborTamanhoId: number;
+        ingredienteId: string;
+        quantidadeUsada: Prisma.Decimal;
+        unidadeMedida: string;
+      }> = []
+
+      // Buscar ingredientes por nome
+      const mussarela = await prisma.ingrediente.findUnique({ where: { nome: 'Muçarela' } })
+      const presunto = await prisma.ingrediente.findUnique({ where: { nome: 'Presunto' } })
+      const molho = await prisma.ingrediente.findUnique({ where: { nome: 'Molho de Tomate' } })
+
+      if (st.sabor.nome === 'Margherita' && mussarela && molho) {
+        fichaItems.push(
+          { saborTamanhoId: st.id, ingredienteId: mussarela.id, quantidadeUsada: new Prisma.Decimal(150), unidadeMedida: 'g' },
+          { saborTamanhoId: st.id, ingredienteId: molho.id, quantidadeUsada: new Prisma.Decimal(80), unidadeMedida: 'ml' },
+        )
+      } else if (st.sabor.nome === 'Calabresa' && mussarela && molho) {
+        fichaItems.push(
+          { saborTamanhoId: st.id, ingredienteId: mussarela.id, quantidadeUsada: new Prisma.Decimal(120), unidadeMedida: 'g' },
+          { saborTamanhoId: st.id, ingredienteId: molho.id, quantidadeUsada: new Prisma.Decimal(80), unidadeMedida: 'ml' },
+        )
+      } else if (st.sabor.nome === 'Portuguesa' && mussarela && presunto && molho) {
+        fichaItems.push(
+          { saborTamanhoId: st.id, ingredienteId: mussarela.id, quantidadeUsada: new Prisma.Decimal(120), unidadeMedida: 'g' },
+          { saborTamanhoId: st.id, ingredienteId: presunto.id, quantidadeUsada: new Prisma.Decimal(80), unidadeMedida: 'g' },
+          { saborTamanhoId: st.id, ingredienteId: molho.id, quantidadeUsada: new Prisma.Decimal(80), unidadeMedida: 'ml' },
+        )
+      }
+
+      if (fichaItems.length > 0) {
+        await prisma.fichaTecnica.createMany({ data: fichaItems })
+      }
+    }
+
+    // 7. FICHA TÉCNICA - Bordas
+    console.log('Criando Ficha Técnica das Bordas...')
+    const bordaTamanhos = await prisma.bordaTamanhoPreco.findMany({
+      include: { borda: true, tamanho: true },
+    })
+
+    for (const bt of bordaTamanhos) {
+      const catupiryIng = await prisma.ingrediente.findUnique({ where: { nome: 'Catupiry' } })
+      const cheddarIng = await prisma.ingrediente.findUnique({ where: { nome: 'Cheddar' } })
+
+      if (bt.borda.nome === 'Catupiry' && catupiryIng) {
+        await prisma.fichaTecnica.create({
+          data: {
+            bordaTamanhoId: bt.id,
+            ingredienteId: catupiryIng.id,
+            quantidadeUsada: new Prisma.Decimal(100),
+            unidadeMedida: 'g',
+          },
+        })
+      } else if (bt.borda.nome === 'Cheddar' && cheddarIng) {
+        await prisma.fichaTecnica.create({
+          data: {
+            bordaTamanhoId: bt.id,
+            ingredienteId: cheddarIng.id,
+            quantidadeUsada: new Prisma.Decimal(80),
+            unidadeMedida: 'g',
+          },
+        })
+      }
+    }
+
     console.log('✅ Seed concluído com sucesso!')
     console.log(`📊 Resumo:
     - ${ingredientes.length} ingredientes criados
-    - 3 sabores vinculados a 3 tamanhos
-    - 2 bordas vinculadas a 3 tamanhos
-    - 3 tamanhos criados`)
+    - 3 sabores vinculados a 4 tamanhos
+    - 2 bordas vinculadas a 4 tamanhos
+    - 4 tamanhos criados
+    - Fichas técnicas criadas para sabores e bordas`)
 
   } catch (error) {
     console.error('❌ Erro durante o povoamento do banco:', error)

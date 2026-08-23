@@ -9,6 +9,7 @@ import { PedidoService } from '../services/pedidoService';
 import { getIO } from '../socket';
 import { sendPushToAll } from '../lib/push';
 import { sanitizeText } from '../lib/sanitize';
+import { verifyToken } from '../lib/auth';
 
 const service = new PedidoService();
 
@@ -42,6 +43,17 @@ export async function pedidosRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       try {
+        // Extrai usuarioId do token JWT se presente
+        let usuarioId: number | undefined;
+        const authHeader = request.headers.authorization;
+        if (authHeader?.startsWith('Bearer ')) {
+          const token = authHeader.slice(7);
+          const payload = verifyToken(token);
+          if (payload) {
+            usuarioId = payload.usuarioId;
+          }
+        }
+
         const payload = {
           ...request.body,
           clienteNome: sanitizeText(request.body.clienteNome),
@@ -56,7 +68,7 @@ export async function pedidosRoutes(app: FastifyInstance) {
           })),
         };
 
-        const novoPedido = await service.criar(payload);
+        const novoPedido = await service.criar({ ...payload, usuarioId });
 
         // 📢 WebSocket: notifica clientes conectados
         getIO().emit('pedido:criado', novoPedido);

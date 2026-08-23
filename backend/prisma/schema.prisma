@@ -142,6 +142,18 @@ enum StatusPedido {
   CANCELADO
 }
 
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  nome      String   @db.VarChar(100)
+  email     String   @unique @db.VarChar(200)
+  senhaHash String   @map("senha_hash") @db.VarChar(255)
+  criadoEm  DateTime @default(now()) @map("criado_em")
+
+  pedidos Pedido[]
+
+  @@map("usuarios")
+}
+
 model Pedido {
   id              Int          @id @default(autoincrement())
   clienteNome     String       @map("cliente_nome") @db.VarChar(100)
@@ -151,9 +163,11 @@ model Pedido {
   status          StatusPedido @default(RECEBIDO)
   valorTotal      Decimal      @default(0.00) @map("valor_total") @db.Decimal(10, 2)
   criadoEm        DateTime     @default(now()) @map("criado_em")
+  usuarioId       Int?         @map("usuario_id")
 
   // Relacionamentos
-  itens PedidoItem[]
+  usuario Usuario?    @relation(fields: [usuarioId], references: [id])
+  itens   PedidoItem[]
 
   @@map("pedidos")
 }

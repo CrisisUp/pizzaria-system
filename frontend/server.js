@@ -15,7 +15,7 @@ app.prepare().then(() => {
 
     // Proxy /api/* to backend
     if (parsedUrl.pathname.startsWith('/api/')) {
-      const backendUrl = `http://backend:3333${parsedUrl.pathname}`;
+      const backendUrl = `http://localhost:3333${parsedUrl.pathname}`;
       try {
         const response = await fetch(backendUrl, {
           method: req.method,

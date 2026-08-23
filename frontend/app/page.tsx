@@ -350,6 +350,7 @@ export default function Home() {
                   return (
                     <button
                       key={t.id}
+                      data-testid={`tamanho-${t.nome}`}
                       disabled={enviando}
                       onClick={() => {
                         som(tocarSomClique);
@@ -378,6 +379,7 @@ export default function Home() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <button
                   disabled={enviando}
+                  data-testid="borda-sem"
                   onClick={() => {
                     som(tocarSomClique);
                     setPizza({ ...pizza, borda: null });
@@ -399,6 +401,7 @@ export default function Home() {
                   return (
                     <button
                       key={b.id}
+                      data-testid={`borda-${b.nome}`}
                       disabled={enviando}
                       onClick={() => {
                         som(tocarSomClique);
@@ -437,6 +440,7 @@ export default function Home() {
                   return (
                     <button
                       key={s.id}
+                      data-testid={`sabor-${s.nome}`}
                       disabled={desabilitado}
                       onClick={() => selecionarSabor(s)}
                       className={`p-4 rounded-xl border text-left transition-all flex justify-between items-start ${
@@ -481,6 +485,7 @@ export default function Home() {
                 <div className="grid grid-cols-3 gap-1 bg-zinc-950 p-1 rounded-lg border border-zinc-800">
                   <button
                     type="button"
+                    data-testid="tipo-pedido-MESA"
                     disabled={enviando}
                     onClick={() => {
                       som(tocarSomClique);
@@ -496,6 +501,7 @@ export default function Home() {
                   </button>
                   <button
                     type="button"
+                    data-testid="tipo-pedido-DELIVERY"
                     disabled={enviando}
                     onClick={() => {
                       som(tocarSomClique);
@@ -511,6 +517,7 @@ export default function Home() {
                   </button>
                   <button
                     type="button"
+                    data-testid="tipo-pedido-BALCAO"
                     disabled={enviando}
                     onClick={() => {
                       som(tocarSomClique);
@@ -535,6 +542,7 @@ export default function Home() {
                   </label>
                   <input
                     type="text"
+                    data-testid="cliente-nome"
                     value={clienteNome}
                     onChange={(e) => setClienteNome(e.target.value)}
                     disabled={enviando}
@@ -550,6 +558,7 @@ export default function Home() {
                       <label className="block text-xs text-zinc-400 mb-1">Telefone / WhatsApp:</label>
                       <input
                         type="text"
+                        data-testid="cliente-telefone"
                         value={clienteTelefone}
                         onChange={(e) => setClienteTelefone(e.target.value)}
                         disabled={enviando}
@@ -562,6 +571,7 @@ export default function Home() {
                       <label className="block text-xs text-zinc-400 mb-1">Endereço de Entrega:</label>
                       <input
                         type="text"
+                        data-testid="endereco-entrega"
                         value={enderecoEntrega}
                         onChange={(e) => setEnderecoEntrega(e.target.value)}
                         disabled={enviando}
@@ -605,6 +615,7 @@ export default function Home() {
               <div className="pt-4">
                 <label className="block text-xs text-zinc-400 mb-1">Observações:</label>
                 <textarea
+                  data-testid="observacoes"
                   value={pizza.observacoes}
                   onChange={(e) => setPizza({ ...pizza, observacoes: e.target.value })}
                   disabled={enviando}
@@ -617,7 +628,7 @@ export default function Home() {
               <div className="pt-4 flex justify-between items-end">
                 <div>
                   <span className="text-xs text-zinc-400 block">Total</span>
-                  <span className="text-2xl font-extrabold text-orange-500">
+                  <span data-testid="preco-total" className="text-2xl font-extrabold text-orange-500">
                     R$ {precoTotal().toFixed(2)}
                   </span>
                 </div>
@@ -625,6 +636,7 @@ export default function Home() {
             </div>
 
             <button
+              data-testid="finalizar-pedido"
               onClick={handleFinalizarPedido}
               disabled={enviando || !pizza.tamanho || pizza.sabores.length === 0}
               className="w-full bg-orange-600 hover:bg-orange-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-orange-600/20 cursor-pointer disabled:cursor-not-allowed"

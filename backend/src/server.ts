@@ -5,6 +5,7 @@ import swaggerUi from '@fastify/swagger-ui';
 import Fastify from 'fastify';
 import { jsonSchemaTransform, serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 
+import { authRoutes } from './routes/auth';
 import { ingredientesRoutes } from './routes/ingredientes';
 import { pedidosRoutes } from './routes/pedidos';
 import { pushRoutes } from './routes/push';
@@ -60,6 +61,7 @@ app.register(saboresRoutes, { prefix: '/api/sabores' });
 app.register(tamanhosEBordasRoutes, { prefix: '/api' });
 app.register(pedidosRoutes, { prefix: '/api/pedidos' });
 app.register(pushRoutes, { prefix: '/api/push' });
+app.register(authRoutes, { prefix: '/api/auth' });
 
 // 4. Healthcheck
 app.get('/health', async () => ({ status: 'OK', timestamp: new Date().toISOString() }));

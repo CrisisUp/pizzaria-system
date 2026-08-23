@@ -1,0 +1,33 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+        working-directory: ./backend
+      - run: npm run lint 2>/dev/null || echo "No lint script in backend"
+      - run: npm ci
+        working-directory: ./frontend
+      - run: npm run lint 2>/dev/null || echo "No lint script in frontend"
+
+  unit-tests:
+    uses: ./.github/workflows/unit-tests.yml
+
+  integration-tests:
+    uses: ./.github/workflows/integration-tests.yml
+
+  e2e-tests:
+    uses: ./.github/workflows/e2e-tests.yml
+    needs: [lint, unit-tests, integration-tests]

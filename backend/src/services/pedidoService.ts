@@ -20,6 +20,7 @@ export interface CriarPedidoInput {
   enderecoEntrega?: string;
   tipoPedido: TipoPedido;
   itens: ItemPedidoInput[];
+  usuarioId?: number;
 }
 
 export class PedidoService {
@@ -116,6 +117,7 @@ export class PedidoService {
           tipoPedido: data.tipoPedido,
           valorTotal: valorTotalPedido,
           status: StatusPedido.RECEBIDO,
+          usuarioId: data.usuarioId,
           itens: {
             create: itensParaCriar.map((item) => ({
               tamanhoId: item.tamanhoId,

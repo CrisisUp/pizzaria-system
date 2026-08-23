@@ -4,7 +4,7 @@ import { registerSchema, loginSchema, authParamsSchema } from '../authSchema'
 
 describe('schemas/authSchema', () => {
   describe('registerSchema', () => {
-    const schema = z.object({ body: registerSchema.body })
+    const schema = registerSchema
 
     it('deve validar dados de registro válidos', () => {
       const input = {
@@ -77,7 +77,7 @@ describe('schemas/authSchema', () => {
   })
 
   describe('loginSchema', () => {
-    const schema = z.object({ body: loginSchema.body })
+    const schema = loginSchema
 
     it('deve validar dados de login válidos', () => {
       const input = {

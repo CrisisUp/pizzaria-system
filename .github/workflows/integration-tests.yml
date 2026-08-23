@@ -12,19 +12,6 @@ jobs:
     defaults:
       run:
         working-directory: ./backend
-    services:
-      postgres:
-        image: postgres:16-alpine
-        ports: ['5434:5432']
-        env:
-          POSTGRES_USER: pizzaria
-          POSTGRES_PASSWORD: pizzaria123
-          POSTGRES_DB: pizzaria_test
-        options: >-
-          --health-cmd "pg_isready -U pizzaria -d pizzaria_test"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -34,9 +21,4 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
       - run: npx prisma generate
-      - run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: postgresql://pizzaria:pizzaria123@localhost:5434/pizzaria_test?schema=public
       - run: npm run test:integration
-        env:
-          DATABASE_URL: postgresql://pizzaria:pizzaria123@localhost:5434/pizzaria_test?schema=public

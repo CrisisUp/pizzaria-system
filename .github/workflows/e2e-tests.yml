@@ -9,9 +9,19 @@ on:
 jobs:
   e2e-tests:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./frontend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        ports: ['5432:5432']
+        env:
+          POSTGRES_USER: pizzaria
+          POSTGRES_PASSWORD: pizzaria123
+          POSTGRES_DB: pizzaria
+        options: >-
+          --health-cmd "pg_isready -U pizzaria -d pizzaria"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,12 +31,33 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      # Start backend + postgres for E2E
-      - uses: actions/setup-docker@v1
-      - run: docker compose -f ../docker-compose.yml up -d postgres backend
-        working-directory: ..
-      - run: sleep 10 && curl -f http://localhost:3333/health
+      # Setup backend
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+        working-directory: ./backend
+      - run: npx prisma generate
+        working-directory: ./backend
+      - run: npx prisma migrate deploy
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://pizzaria:pizzaria123@localhost:5432/pizzaria?schema=public
+      - run: npm run dev &
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://pizzaria:pizzaria123@localhost:5432/pizzaria?schema=public
+          PORT: "3333"
+          CORS_ORIGIN: "http://localhost:3000"
+          JWT_SECRET: "test-secret"
+      # Start frontend
+      - run: npm run dev &
+        working-directory: ./frontend
+      - run: sleep 15 && curl -f http://localhost:3333/health && curl -f http://localhost:3000
       - run: npm run test:e2e
+        working-directory: ./frontend
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
       - uses: actions/upload-artifact@v4

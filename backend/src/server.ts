@@ -3,7 +3,7 @@ import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import Fastify from 'fastify';
-import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
+import { jsonSchemaTransform, serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 
 import { authRoutes } from './routes/auth';
 import { ingredientesRoutes } from './routes/ingredientes';
@@ -50,6 +50,7 @@ app.register(swagger, {
     },
     servers: [{ url: 'http://localhost:3333', description: 'Servidor Local' }],
   },
+  transform: jsonSchemaTransform,
 });
 
 app.register(swaggerUi, { routePrefix: '/docs' });

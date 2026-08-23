@@ -7,9 +7,11 @@ export const criarIngredienteSchema = z.object({
   quantidadeEmbalagem: z.number().positive('A quantidade por embalagem deve ser positiva'),
 });
 
-// Params do URL sempre são strings
+// Params do URL são strings do path
 export const ingredienteParamsSchema = z.object({
   id: z.string().min(1),
 });
+
+// Para uso com Fastify (params são always string no URL)
 
 export const atualizarIngredienteSchema = criarIngredienteSchema.partial();

@@ -9,7 +9,7 @@ export const criarIngredienteSchema = z.object({
 
 // Força a conversão para string, aceitando string ou number de entrada
 export const ingredienteParamsSchema = z.object({
-  id: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  id: z.string(),
 });
 
 export const atualizarIngredienteSchema = criarIngredienteSchema.partial();

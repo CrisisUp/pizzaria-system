@@ -100,12 +100,9 @@ describe('schemas/ingredienteSchema', () => {
       }
     })
 
-    it('deve aceitar ID number e converter para string', () => {
+    it('deve rejeitar ID number (params são strings do URL)', () => {
       const resultado = ingredienteParamsSchema.safeParse({ id: 123 })
-      expect(resultado.success).toBe(true)
-      if (resultado.success) {
-        expect(resultado.data.id).toBe('123')
-      }
+      expect(resultado.success).toBe(false)
     })
   })
 })

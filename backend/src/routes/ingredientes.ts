@@ -3,7 +3,6 @@ import { ZodTypeProvider } from 'fastify-type-provider-zod';
 import {
   atualizarIngredienteSchema,
   criarIngredienteSchema,
-  ingredienteParamsSchema,
 } from '../schemas/ingredienteSchema';
 import { IngredienteService } from '../services/ingredienteService';
 
@@ -27,11 +26,6 @@ export async function ingredientesRoutes(app: FastifyInstance) {
   // GET /api/ingredientes/:id - Buscar por ID
   typedApp.get(
     '/ingredientes/:id',
-    {
-      schema: {
-        params: ingredienteParamsSchema,
-      },
-    },
     async (request, reply) => {
       try {
         const { id } = request.params;
@@ -76,7 +70,6 @@ export async function ingredientesRoutes(app: FastifyInstance) {
     '/ingredientes/:id',
     {
       schema: {
-        params: ingredienteParamsSchema,
         body: atualizarIngredienteSchema,
       },
     },
@@ -99,11 +92,6 @@ export async function ingredientesRoutes(app: FastifyInstance) {
   // DELETE /api/ingredientes/:id - Deletar ingrediente
   typedApp.delete(
     '/ingredientes/:id',
-    {
-      schema: {
-        params: ingredienteParamsSchema,
-      },
-    },
     async (request, reply) => {
       const { id } = request.params;
 

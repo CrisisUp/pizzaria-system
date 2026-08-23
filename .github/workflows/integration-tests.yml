@@ -22,3 +22,7 @@ jobs:
       - run: npm ci
       - run: npx prisma generate
       - run: npm run test:integration
+        env:
+          VAPID_PUBLIC_KEY: "BCh5az1teMFHC5QTv45MQjHxZQqdM7bo0KGJibevgPsk8FjAiHB-WYp1ITlRDVyAOq5xRUCyH51vS8CFdbV8i0Y"
+          VAPID_PRIVATE_KEY: "k6RjGAzCq7wGkhv_pklKLb1kibMb1vx9ZptOZ5qXiZ4"
+          VAPID_SUBJECT: "mailto:test@test.com"

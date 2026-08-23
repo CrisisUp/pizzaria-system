@@ -8,20 +8,32 @@ let container: Awaited<ReturnType<GenericContainer['start']>>
 export let prisma: PrismaClient
 
 export async function setupTestDatabase() {
-  container = await new GenericContainer('postgres:16-alpine')
-    .withEnvironment({
-      POSTGRES_USER: 'test',
-      POSTGRES_PASSWORD: 'test',
-      POSTGRES_DB: 'pizzaria_test',
-    })
-    .withExposedPorts(5432)
-    .start()
+  // Check if running in CI (GitHub Actions)
+  const isCI = process.env.CI === 'true'
 
-  const url = `postgresql://test:test@${container.getHost()}:${container.getMappedPort(5432)}/pizzaria_test?schema=public`
-  process.env.DATABASE_URL = url
+  let url: string
+
+  if (isCI) {
+    // In CI, use the PostgreSQL service container provided by GitHub Actions
+    url = 'postgresql://test:test@localhost:5432/pizzaria_test?schema=public'
+    process.env.DATABASE_URL = url
+  } else {
+    // Local development: use TestContainers
+    container = await new GenericContainer('postgres:16-alpine')
+      .withEnvironment({
+        POSTGRES_USER: 'test',
+        POSTGRES_PASSWORD: 'test',
+        POSTGRES_DB: 'pizzaria_test',
+      })
+      .withExposedPorts(5432)
+      .start()
+
+    url = `postgresql://test:test@${container.getHost()}:${container.getMappedPort(5432)}/pizzaria_test?schema=public`
+    process.env.DATABASE_URL = url
+  }
 
   // Push schema
-  execSync('npx prisma db push --skip-generate', {
+  execSync('npx prisma db push --force-reset', {
     cwd: path.resolve(__dirname, '..'),
     env: { ...process.env, DATABASE_URL: url },
     stdio: 'inherit',

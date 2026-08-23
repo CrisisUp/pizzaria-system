@@ -67,8 +67,8 @@ describe('lib/sanitize', () => {
     it('deve escapar < e > restantes', () => {
       const input = 'a < b > c'
       const resultado = sanitizeText(input)
-      // A função escapa < e > para < e > por segurança
-      expect(resultado).toBe('a < b > c')
+      // A função escapa < e > para entidades HTML por segurança
+      expect(resultado).toBe('a &lt; b &gt; c')
     })
 
     it('deve preservar texto normal com acentos e pontuação', () => {

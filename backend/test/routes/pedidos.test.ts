@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import Fastify from 'fastify'
+import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod'
 import { pedidosRoutes } from '../../src/routes/pedidos'
 import { saboresRoutes } from '../../src/routes/sabores'
 import { tamanhosEBordasRoutes } from '../../src/routes/tamanhosEBordas'
@@ -20,6 +21,8 @@ describe('routes/pedidos (Integration)', () => {
 
   beforeAll(async () => {
     app = Fastify()
+    app.setValidatorCompiler(validatorCompiler)
+    app.setSerializerCompiler(serializerCompiler)
     await app.register(ingredientesRoutes, { prefix: '/api' })
     await app.register(tamanhosEBordasRoutes, { prefix: '/api' })
     await app.register(saboresRoutes, { prefix: '/api/sabores' })

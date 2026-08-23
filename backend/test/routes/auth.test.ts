@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import Fastify from 'fastify'
+import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod'
 import { authRoutes } from '../../src/routes/auth'
 import { prisma } from '../setup'
 
@@ -9,6 +10,8 @@ describe('routes/auth (Integration)', () => {
 
   beforeAll(async () => {
     app = Fastify()
+    app.setValidatorCompiler(validatorCompiler)
+    app.setSerializerCompiler(serializerCompiler)
     await app.register(authRoutes, { prefix: '/api/auth' })
     await app.ready()
   })

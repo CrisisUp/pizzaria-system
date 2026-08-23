@@ -20,8 +20,8 @@ export async function setupTestDatabase() {
   const url = `postgresql://test:test@${container.getHost()}:${container.getMappedPort(5432)}/pizzaria_test?schema=public`
   process.env.DATABASE_URL = url
 
-  // Run migrations
-  execSync('prisma migrate deploy', {
+  // Push schema
+  execSync('npx prisma db push --skip-generate', {
     cwd: path.resolve(__dirname, '..'),
     env: { ...process.env, DATABASE_URL: url },
     stdio: 'inherit',

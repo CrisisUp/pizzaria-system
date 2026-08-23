@@ -27,24 +27,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
       # Setup backend
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
       - run: npm ci
         working-directory: ./backend
       - run: npx prisma generate
         working-directory: ./backend
-      - run: npx prisma migrate deploy
+      - run: npx prisma db push --force-reset
         working-directory: ./backend
         env:
           DATABASE_URL: postgresql://pizzaria:pizzaria123@localhost:5432/pizzaria?schema=public
+          VAPID_PUBLIC_KEY: "BCh5az1teMFHC5QTv45MQjHxZQqdM7bo0KGJibevgPsk8FjAiHB-WYp1ITlRDVyAOq5xRUCyH51vS8CFdbV8i0Y"
+          VAPID_PRIVATE_KEY: "k6RjGAzCq7wGkhv_pklKLb1kibMb1vx9ZptOZ5qXiZ4"
+          VAPID_SUBJECT: "mailto:test@test.com"
       - run: npm run dev &
         working-directory: ./backend
         env:
@@ -55,10 +49,16 @@ jobs:
           VAPID_PUBLIC_KEY: "BCh5az1teMFHC5QTv45MQjHxZQqdM7bo0KGJibevgPsk8FjAiHB-WYp1ITlRDVyAOq5xRUCyH51vS8CFdbV8i0Y"
           VAPID_PRIVATE_KEY: "k6RjGAzCq7wGkhv_pklKLb1kibMb1vx9ZptOZ5qXiZ4"
           VAPID_SUBJECT: "mailto:test@test.com"
-      # Start frontend
+      # Setup frontend
+      - run: npm ci
+        working-directory: ./frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: ./frontend
       - run: npm run dev &
         working-directory: ./frontend
+      # Wait for services
       - run: sleep 15 && curl -f http://localhost:3333/health && curl -f http://localhost:3000
+      # Run E2E tests
       - run: npm run test:e2e
         working-directory: ./frontend
         env:

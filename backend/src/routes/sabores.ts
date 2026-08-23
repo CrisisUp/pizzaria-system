@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { ISaborRepository } from '../repositories/ISaborRepository';
 import { PrismaSaborRepository } from '../repositories/prisma/PrismaSaborRepository';
 import {

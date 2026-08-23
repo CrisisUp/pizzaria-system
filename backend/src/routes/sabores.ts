@@ -28,7 +28,7 @@ export async function saboresRoutes(app: FastifyInstance) {
   });
 
   // 2. Buscar por ID
-  server.get('/:id', { schema: { params: saborParamsSchema } }, async (request, reply) => {
+  server.get('/:id', { schema: z.object({ params: saborParamsSchema }) }, async (request, reply) => {
     try {
       const { id } = request.params;
       const sabor = await service.buscarPorId(id);
@@ -59,7 +59,15 @@ export async function saboresRoutes(app: FastifyInstance) {
   });
 
   // 4. Atualizar Sabor
-  server.put('/:id', { schema: { params: saborParamsSchema, ...atualizarSaborSchema } }, async (request, reply) => {
+  const atualizarSaborFullSchema = z.object({
+    params: z.object({ id: z.string().transform((val) => Number(val)).refine((val) => !isNaN(val), { message: 'ID do sabor deve ser um número válido' }) }),
+    body: z.object({
+      nome: z.string().optional(),
+      descricao: z.string().optional(),
+      precos: z.array(z.object({ tamanhoId: z.number().int().positive(), precoVenda: z.number().positive() })).optional(),
+    }),
+  });
+  server.put('/:id', { schema: atualizarSaborFullSchema }, async (request, reply) => {
     try {
       const { id } = request.params;
       const body = request.body as any;
@@ -76,7 +84,7 @@ export async function saboresRoutes(app: FastifyInstance) {
   });
 
   // 5. Atualizar Ficha Técnica
-  server.put('/:id/ficha-tecnica', { schema: { params: saborParamsSchema, ...atualizarFichaTecnicaSchema } }, async (request, reply) => {
+  server.put('/:id/ficha-tecnica', { schema: atualizarFichaTecnicaSchema }, async (request, reply) => {
     try {
       const { id } = request.params;
       const resultado = await service.atualizarFichaTecnica(id, request.body as any);
@@ -88,7 +96,7 @@ export async function saboresRoutes(app: FastifyInstance) {
   });
 
   // 6. Deletar Sabor
-  server.delete('/:id', { schema: { params: saborParamsSchema } }, async (request, reply) => {
+  server.delete('/:id', { schema: z.object({ params: z.object({ id: z.string().transform((val) => Number(val)).refine((val) => !isNaN(val), { message: 'ID do sabor deve ser um número válido' }) }) }) }, async (request, reply) => {
     try {
       const { id } = request.params;
       await service.deletar(id);

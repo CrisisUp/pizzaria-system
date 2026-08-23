@@ -67,8 +67,6 @@ describe('schemas/saborSchema', () => {
   })
 
   describe('criarSaborSchema', () => {
-    const schema = z.object({ body: criarSaborSchema.body })
-
     const saborValido = {
       nome: 'Calabresa',
       descricao: 'Calabresa com cebola',
@@ -83,13 +81,13 @@ describe('schemas/saborSchema', () => {
     }
 
     it('deve validar sabor completo válido', () => {
-      const resultado = schema.safeParse({ body: saborValido })
+      const resultado = criarSaborSchema.safeParse({ body: saborValido })
       expect(resultado.success).toBe(true)
     })
 
     it('deve rejeitar nome vazio', () => {
       const input = { ...saborValido, nome: '' }
-      const resultado = schema.safeParse({ body: input })
+      const resultado = criarSaborSchema.safeParse({ body: input })
       expect(resultado.success).toBe(false)
       if (!resultado.success) {
         expect(resultado.error.issues[0].message).toContain('obrigatório')
@@ -98,7 +96,7 @@ describe('schemas/saborSchema', () => {
 
     it('deve rejeitar array de precos vazio', () => {
       const input = { ...saborValido, precos: [] }
-      const resultado = schema.safeParse({ body: input })
+      const resultado = criarSaborSchema.safeParse({ body: input })
       expect(resultado.success).toBe(false)
       if (!resultado.success) {
         expect(resultado.error.issues[0].message).toContain('Pelo menos um preço')
@@ -107,42 +105,38 @@ describe('schemas/saborSchema', () => {
 
     it('deve aceitar descricao opcional', () => {
       const input = { ...saborValido, descricao: undefined }
-      const resultado = schema.safeParse({ body: input })
+      const resultado = criarSaborSchema.safeParse({ body: input })
       expect(resultado.success).toBe(true)
     })
   })
 
   describe('atualizarSaborSchema', () => {
-    const schema = z.object({ body: atualizarSaborSchema.body })
-
     it('deve aceitar atualização parcial (apenas nome)', () => {
-      const resultado = schema.safeParse({ body: { nome: 'Novo Nome' } })
+      const resultado = atualizarSaborSchema.safeParse({ body: { nome: 'Novo Nome' } })
       expect(resultado.success).toBe(true)
     })
 
     it('deve aceitar atualização parcial (apenas descricao)', () => {
-      const resultado = schema.safeParse({ body: { descricao: 'Nova descrição' } })
+      const resultado = atualizarSaborSchema.safeParse({ body: { descricao: 'Nova descrição' } })
       expect(resultado.success).toBe(true)
     })
 
     it('deve aceitar atualização de precos', () => {
-      const resultado = schema.safeParse({
+      const resultado = atualizarSaborSchema.safeParse({
         body: { precos: [{ tamanhoId: 1, precoVenda: 40.0 }] },
       })
       expect(resultado.success).toBe(true)
     })
 
     it('deve aceitar objeto vazio', () => {
-      const resultado = schema.safeParse({ body: {} })
+      const resultado = atualizarSaborSchema.safeParse({ body: {} })
       expect(resultado.success).toBe(true)
     })
   })
 
   describe('atualizarFichaTecnicaSchema', () => {
-    const schema = z.object({ body: atualizarFichaTecnicaSchema.body })
-
     it('deve validar array de ficha técnica', () => {
-      const resultado = schema.safeParse({
+      const resultado = atualizarFichaTecnicaSchema.safeParse({
         body: {
           fichaTecnica: [
             { tamanhoId: 1, ingredienteId: 'ing-1', quantidadeUsada: 100, unidadeMedida: 'g' },
@@ -154,7 +148,7 @@ describe('schemas/saborSchema', () => {
     })
 
     it('deve rejeitar array vazio', () => {
-      const resultado = schema.safeParse({ body: { fichaTecnica: [] } })
+      const resultado = atualizarFichaTecnicaSchema.safeParse({ body: { fichaTecnica: [] } })
       expect(resultado.success).toBe(true) // Zod não valida min por padrão
     })
   })

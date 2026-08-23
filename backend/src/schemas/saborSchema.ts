@@ -12,26 +12,6 @@ export const ingredienteFichaTecnicaSchema = z.object({
   unidadeMedida: z.string().optional().default('g'),
 });
 
-export const atualizarSaborSchema = {
-  body: z.object({
-    nome: z.string().optional(),
-    descricao: z.string().optional(),
-    precos: z.array(precoPorTamanhoSchema).optional(),
-  }),
-};
-
-export const atualizarFichaTecnicaSchema = {
-  body: z.object({
-    fichaTecnica: z.array(ingredienteFichaTecnicaSchema),
-  }),
-};
-
-export const saborParamsSchema = z.object({
-  id: z.string().transform((val) => Number(val)).refine((val) => !isNaN(val), {
-    message: 'ID do sabor deve ser um número válido',
-  }),
-});
-
 export const criarSaborBodySchema = z.object({
   nome: z.string().min(1, 'Nome do sabor é obrigatório'),
   descricao: z.string().optional(),
@@ -39,6 +19,30 @@ export const criarSaborBodySchema = z.object({
   fichaTecnica: z.array(ingredienteFichaTecnicaSchema),
 });
 
-export const criarSaborSchema = {
+export const criarSaborSchema = z.object({
   body: criarSaborBodySchema,
-};
+});
+
+export const atualizarSaborBodySchema = z.object({
+  nome: z.string().optional(),
+  descricao: z.string().optional(),
+  precos: z.array(precoPorTamanhoSchema).optional(),
+});
+
+export const atualizarSaborSchema = z.object({
+  body: atualizarSaborBodySchema,
+});
+
+export const atualizarFichaTecnicaBodySchema = z.object({
+  fichaTecnica: z.array(ingredienteFichaTecnicaSchema),
+});
+
+export const atualizarFichaTecnicaSchema = z.object({
+  body: atualizarFichaTecnicaBodySchema,
+});
+
+export const saborParamsSchema = z.object({
+  id: z.string().transform((val) => Number(val)).refine((val) => !isNaN(val), {
+    message: 'ID do sabor deve ser um número válido',
+  }),
+});

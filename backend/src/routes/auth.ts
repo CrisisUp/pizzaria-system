@@ -3,7 +3,10 @@ import { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { hashPassword, comparePassword, generateToken, verifyToken } from '../lib/auth';
-import { loginSchema, registerSchema } from '../schemas/authSchema';
+import { registerBodySchema, loginBodySchema, authParamsSchema } from '../schemas/authSchema';
+
+const registerSchema = z.object({ body: registerBodySchema });
+const loginSchema = z.object({ body: loginBodySchema });
 
 export async function authRoutes(app: FastifyInstance) {
   const server = app.withTypeProvider<ZodTypeProvider>();

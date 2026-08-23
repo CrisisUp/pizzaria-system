@@ -16,11 +16,15 @@ export async function seedIngredientes(prisma: PrismaClient) {
   ]
 
   for (const ing of ingredientes) {
-    await prisma.ingrediente.upsert({
-      where: { nome: ing.nome },
-      update: ing,
-      create: ing,
-    })
+    const existing = await prisma.ingrediente.findUnique({ where: { nome: ing.nome } })
+    if (existing) {
+      await prisma.ingrediente.update({
+        where: { id: existing.id },
+        data: ing,
+      })
+    } else {
+      await prisma.ingrediente.create({ data: ing })
+    }
   }
 
   return prisma.ingrediente.findMany({ orderBy: { nome: 'asc' } })

@@ -7,9 +7,9 @@ export const criarIngredienteSchema = z.object({
   quantidadeEmbalagem: z.number().positive('A quantidade por embalagem deve ser positiva'),
 });
 
-// Força a conversão para string, aceitando string ou number de entrada
+// Params do URL sempre são strings
 export const ingredienteParamsSchema = z.object({
-  id: z.string(),
+  id: z.string().min(1),
 });
 
 export const atualizarIngredienteSchema = criarIngredienteSchema.partial();

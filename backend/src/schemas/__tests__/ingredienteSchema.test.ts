@@ -12,13 +12,13 @@ describe('schemas/ingredienteSchema', () => {
     }
 
     it('deve validar ingrediente completo válido', () => {
-      const resultado = criarIngredienteSchema.safeParse(ingredienteValido)
+      const resultado = criarIngredienteSchema.safeParse({ body: ingredienteValido })
       expect(resultado.success).toBe(true)
     })
 
     it('deve rejeitar nome com menos de 2 caracteres', () => {
       const input = { ...ingredienteValido, nome: 'Q' }
-      const resultado = criarIngredienteSchema.safeParse(input)
+      const resultado = criarIngredienteSchema.safeParse({ body: input })
       expect(resultado.success).toBe(false)
       if (!resultado.success) {
         expect(resultado.error.issues[0].message).toContain('pelo menos 2 caracteres')
@@ -27,7 +27,7 @@ describe('schemas/ingredienteSchema', () => {
 
     it('deve rejeitar unidadeCompra vazia', () => {
       const input = { ...ingredienteValido, unidadeCompra: '' }
-      const resultado = criarIngredienteSchema.safeParse(input)
+      const resultado = criarIngredienteSchema.safeParse({ body: input })
       expect(resultado.success).toBe(false)
       if (!resultado.success) {
         expect(resultado.error.issues[0].message).toContain('obrigatória')
@@ -36,7 +36,7 @@ describe('schemas/ingredienteSchema', () => {
 
     it('deve rejeitar precoUltimaCompra negativo', () => {
       const input = { ...ingredienteValido, precoUltimaCompra: -10 }
-      const resultado = criarIngredienteSchema.safeParse(input)
+      const resultado = criarIngredienteSchema.safeParse({ body: input })
       expect(resultado.success).toBe(false)
       if (!resultado.success) {
         expect(resultado.error.issues[0].message).toContain('não pode ser negativo')
@@ -45,13 +45,13 @@ describe('schemas/ingredienteSchema', () => {
 
     it('deve aceitar precoUltimaCompra zero', () => {
       const input = { ...ingredienteValido, precoUltimaCompra: 0 }
-      const resultado = criarIngredienteSchema.safeParse(input)
+      const resultado = criarIngredienteSchema.safeParse({ body: input })
       expect(resultado.success).toBe(true)
     })
 
     it('deve rejeitar quantidadeEmbalagem não positiva', () => {
       const input = { ...ingredienteValido, quantidadeEmbalagem: 0 }
-      const resultado = criarIngredienteSchema.safeParse(input)
+      const resultado = criarIngredienteSchema.safeParse({ body: input })
       expect(resultado.success).toBe(false)
       if (!resultado.success) {
         expect(resultado.error.issues[0].message).toContain('positiva')
@@ -62,7 +62,7 @@ describe('schemas/ingredienteSchema', () => {
       const unidades = ['KG', 'L', 'UN', 'PC', 'CX']
       for (const unidade of unidades) {
         const input = { ...ingredienteValido, unidadeCompra: unidade }
-        const resultado = criarIngredienteSchema.safeParse(input)
+        const resultado = criarIngredienteSchema.safeParse({ body: input })
         expect(resultado.success).toBe(true)
       }
     })
@@ -70,22 +70,22 @@ describe('schemas/ingredienteSchema', () => {
 
   describe('atualizarIngredienteSchema', () => {
     it('deve aceitar atualização parcial (apenas nome)', () => {
-      const resultado = atualizarIngredienteSchema.safeParse({ nome: 'Novo Nome' })
+      const resultado = atualizarIngredienteSchema.safeParse({ body: { nome: 'Novo Nome' } })
       expect(resultado.success).toBe(true)
     })
 
     it('deve aceitar atualização parcial (apenas precoUltimaCompra)', () => {
-      const resultado = atualizarIngredienteSchema.safeParse({ precoUltimaCompra: 50.0 })
+      const resultado = atualizarIngredienteSchema.safeParse({ body: { precoUltimaCompra: 50.0 } })
       expect(resultado.success).toBe(true)
     })
 
     it('deve aceitar objeto vazio', () => {
-      const resultado = atualizarIngredienteSchema.safeParse({})
+      const resultado = atualizarIngredienteSchema.safeParse({ body: {} })
       expect(resultado.success).toBe(true)
     })
 
     it('deve validar campos quando presentes', () => {
-      const resultado = atualizarIngredienteSchema.safeParse({ nome: 'A' })
+      const resultado = atualizarIngredienteSchema.safeParse({ body: { nome: 'A' } })
       expect(resultado.success).toBe(false)
     })
   })
@@ -100,7 +100,7 @@ describe('schemas/ingredienteSchema', () => {
       }
     })
 
-    it('deve rejeitar ID number (params são strings do URL)', () => {
+    it('deve aceitar ID number e converter para string', () => {
       const resultado = ingredienteParamsSchema.safeParse({ id: 123 })
       expect(resultado.success).toBe(false)
     })
